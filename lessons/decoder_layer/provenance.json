@@ -1,0 +1,18 @@
+{
+  "id": "decoder_layer",
+  "title": "Decoder layer：残差、norm、attention、MLP",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.models.llama.modeling_llama",
+  "symbol": "LlamaDecoderLayer",
+  "kind": "class",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/models/llama/modeling_llama.py",
+  "first_line": 295,
+  "last_line": 337,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/models/llama/modeling_llama.py#L295-L337",
+  "sha256": "56c6003171912b3c921c0e55c70609907eaba7862631e18569049aaf73da9b79",
+  "module_sha256": "87dfc080e7c12b49cdd70bd0c47cc725701fcc54dd8542f301bb0a6c7e8b1e16",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

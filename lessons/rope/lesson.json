@@ -1,0 +1,75 @@
+{
+  "subtitle": "RoPE：把位置编码到 Q / K",
+  "context": "位置不通过给 hidden states 加一行向量，而是旋转 Q 和 K；同一位置表需要沿 head 轴广播。",
+  "outcomes": [
+    "插入用于 head 广播的轴",
+    "旋转 Query",
+    "用相同位置角旋转 Key"
+  ],
+  "runtime_context": "上游 transformers.models.llama.modeling_llama 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 005，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 19,
+      "title": "接口与本课位置",
+      "why": "位置不通过给 hidden states 加一行向量，而是旋转 Q 和 K；同一位置表需要沿 head 轴广播。"
+    },
+    {
+      "start": 20,
+      "end": 21,
+      "title": "插入用于 head 广播的轴",
+      "why": "Q 和 K 的 head 数可能不同，因此 cos/sin 不能写死为某个 head 数。"
+    },
+    {
+      "start": 22,
+      "end": 22,
+      "title": "旋转 Query",
+      "why": "把原向量与 rotate_half 的正交分量按 cos/sin 组合。shape 不变，数值依位置改变。"
+    },
+    {
+      "start": 23,
+      "end": 24,
+      "title": "用相同位置角旋转 Key",
+      "why": "Q/K 的相对位置关系会进入点积；V 不在这里旋转。"
+    }
+  ],
+  "symbols": {
+    "apply_rotary_pos_emb": "用 cos/sin 旋转 Q 和 K 的特征对子，编码 token 位置；不改变它们的 shape。",
+    "cos": "RoPE 或余弦调度中的余弦值；具体角色由本行说明确定。",
+    "k": "尚未施加本次 RoPE 的 K。",
+    "k_embed": "旋转后的 Key，shape 与 k 相同。",
+    "q": "尚未施加本次 RoPE 的 Q。",
+    "q_embed": "旋转后的 Query，shape 与 q 相同。",
+    "rotate_half": "按该模型的特征配对规则交换并取负一半特征，不是沿 token 轴旋转。",
+    "sin": "RoPE 位置角度的正弦表，与 cos 配对使用。它不是 attention 权重。",
+    "unsqueeze": "插入一个长度为 1 的轴，常用于广播。",
+    "unsqueeze_dim": "位置表插入单例 head 轴的位置，必须与 Q/K 的布局对应。",
+    "use_kernel_func_from_hub": "上游可选函数 kernel 集成点；本课不下载或启用远端 kernel。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 20,
+      "end": 20,
+      "replacement": "    __BLANK_1__  # 位置表广播",
+      "title": "位置表广播",
+      "goal": "插入正确的单例轴。"
+    },
+    {
+      "id": 2,
+      "start": 22,
+      "end": 22,
+      "replacement": "    __BLANK_2__  # Q 旋转",
+      "title": "Q 旋转",
+      "goal": "组合原向量与 rotate_half 分量。"
+    },
+    {
+      "id": 3,
+      "start": 23,
+      "end": 23,
+      "replacement": "    __BLANK_3__  # K 旋转",
+      "title": "K 旋转",
+      "goal": "对 K 应用相同位置规则。"
+    }
+  ]
+}

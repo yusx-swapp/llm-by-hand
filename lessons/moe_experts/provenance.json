@@ -1,0 +1,18 @@
+{
+  "id": "moe_experts",
+  "title": "稀疏专家：分发 token 并加权聚合",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.models.mixtral.modeling_mixtral",
+  "symbol": "MixtralExperts.forward",
+  "kind": "method",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/models/mixtral/modeling_mixtral.py",
+  "first_line": 75,
+  "last_line": 99,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/models/mixtral/modeling_mixtral.py#L75-L99",
+  "sha256": "99ca265927013010174286a6de93cbdf3bb601c5e6709397fbd70b5ee294c2b6",
+  "module_sha256": "3a951131b75737658d409ad01143c91735ba6d68f3d25cea7ac729ccfff1be85",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

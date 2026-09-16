@@ -1,0 +1,18 @@
+{
+  "id": "lm_collator",
+  "title": "预训练数据：组批、padding 与 labels",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.data.data_collator",
+  "symbol": "DataCollatorForLanguageModeling.torch_call",
+  "kind": "method",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/data/data_collator.py",
+  "first_line": 765,
+  "last_line": 794,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/data/data_collator.py#L765-L794",
+  "sha256": "95da1321bffe617f99a37f7d307202c07f6a184a7dd1273c5d5d8d171dbbe64c",
+  "module_sha256": "4ef2bde5be531e5fb3414b22e3f493f62fd46ee7b35448e05d7525179cac17ac",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

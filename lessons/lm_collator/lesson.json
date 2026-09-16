@@ -1,0 +1,98 @@
+{
+  "subtitle": "预训练数据：组批、padding 与 labels",
+  "context": "进入训练数据管线：不同长度的样本组批、padding，生成对应 labels。这个上游类同时支持 MLM；本课主线选择 causal LM。",
+  "outcomes": [
+    "按需要建立本地随机生成器",
+    "处理字典和原始 token 列表两种输入",
+    "取出特殊 token 标记",
+    "区分 MLM 与 causal-LM 监督"
+  ],
+  "runtime_context": "上游 transformers.data.data_collator 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 017，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 3,
+      "title": "接口与本课位置",
+      "why": "进入训练数据管线：不同长度的样本组批、padding，生成对应 labels。这个上游类同时支持 MLM；本课主线选择 causal LM。"
+    },
+    {
+      "start": 4,
+      "end": 8,
+      "title": "按需要建立本地随机生成器",
+      "why": "这是 MLM 随机掩码的准备，不意味着 causal LM 会随机遮住 token。"
+    },
+    {
+      "start": 9,
+      "end": 18,
+      "title": "处理字典和原始 token 列表两种输入",
+      "why": "Tokenizer.pad 返回带字段的批次；纯列表则使用上游组批辅助函数。"
+    },
+    {
+      "start": 19,
+      "end": 20,
+      "title": "取出特殊 token 标记",
+      "why": "它供 MLM 使用，不应作为普通模型输入字段留下。"
+    },
+    {
+      "start": 21,
+      "end": 30,
+      "title": "区分 MLM 与 causal-LM 监督",
+      "why": "主线 mlm=False 时复制 input_ids，并把 pad token 对应 labels 设为 -100。"
+    }
+  ],
+  "symbols": {
+    "Any": "允许多种 Python 类型的类型注解，不执行张量转换。",
+    "Mapping": "抽象映射类型，也接受 tokenizer 返回的映射对象。",
+    "_torch_collate_batch": "上游针对纯 token 列表的 PyTorch 组批函数。",
+    "batch": "已经 padding/堆叠好的模型输入和 labels。",
+    "clone": "复制 Tensor 数据并保留可微关系；与 detach 不等价。",
+    "create_rng": "按 seed 创建可复现随机生成器的上游辅助方法。",
+    "dict": "Python 映射类型；键决定数据字段，值可能是 Tensor。",
+    "examples": "尚未组批的样本列表，每个样本可以是字段映射或 token 编号列表。",
+    "generator": "该 collator 保存的随机生成器。",
+    "int": "Python 整数类型注解；这里不意味着会自动做类型转换。",
+    "isinstance": "判断对象所属的类型，从而选择数据处理路径。",
+    "labels": "监督目标的 token 编号；-100 位置会被损失忽略。",
+    "list": "Python 列表类型；不是自动堆叠好的 Tensor。",
+    "mlm": "是否采用 masked language modeling；本课主线设 False。",
+    "offset_mapping": "token 到原文本位置的偏移信息，某些 MLM 路径使用，本课 CLM 路径不依赖它。",
+    "pad_to_multiple_of": "把长度补到某个倍数，常用于硬件友好的布局。",
+    "pad_token_id": "padding token 的整数 id。",
+    "pad_without_fast_tokenizer_warning": "使用 tokenizer.pad 并避免无意义的重复警告。",
+    "pop": "取出并删除字典字段。",
+    "return_tensors": "要求以哪种框架 Tensor 返回，本课为 pt。",
+    "seed": "可选随机种子。",
+    "self": "当前这一层 LlamaAttention 对象；其中保存配置、投影参数和训练状态。",
+    "special_tokens_mask": "指示哪些位置是特殊 token 的标记。",
+    "str": "字符串类型；不是 Tensor。",
+    "tokenizer": "本课本地构造的 tokenizer，定义 pad token 与字段布局，不下载词表。",
+    "torch_call": "进入训练数据管线：不同长度的样本组批、padding，生成对应 labels。这个上游类同时支持 MLM；本课主线选择 causal LM。",
+    "torch_mask_tokens": "MLM 路径中的随机遮蔽与标签生成，本课 causal 示例不会执行。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 26,
+      "end": 26,
+      "replacement": "            __BLANK_1__  # 复制训练目标",
+      "title": "复制训练目标",
+      "goal": "不要直接复用同一个可变 Tensor 而意外改写输入。"
+    },
+    {
+      "id": 2,
+      "start": 28,
+      "end": 28,
+      "replacement": "                __BLANK_2__  # 屏蔽 padding 标签",
+      "title": "屏蔽 padding 标签",
+      "goal": "padding 不应产生语言建模损失。"
+    },
+    {
+      "id": 3,
+      "start": 29,
+      "end": 29,
+      "replacement": "            __BLANK_3__  # 返回监督字段",
+      "title": "返回监督字段",
+      "goal": "使后面的 loss 能读取 labels。"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "rms_norm",
+  "title": "RMSNorm：归一化与数值精度",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.models.llama.modeling_llama",
+  "symbol": "LlamaRMSNorm",
+  "kind": "class",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/models/llama/modeling_llama.py",
+  "first_line": 51,
+  "last_line": 69,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/models/llama/modeling_llama.py#L51-L69",
+  "sha256": "6cf5b1db2ae8fd5ab4f0a49fcc176117f6a80f357560cf244c18e3ff640c6a81",
+  "module_sha256": "87dfc080e7c12b49cdd70bd0c47cc725701fcc54dd8542f301bb0a6c7e8b1e16",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

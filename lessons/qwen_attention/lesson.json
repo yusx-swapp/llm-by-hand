@@ -1,0 +1,184 @@
+{
+  "subtitle": "Qwen3：QK-Norm 与 GQA",
+  "context": "在已掌握 Llama GQA 的基础上比较 Qwen3：每个 head 上额外做 QK-Norm，并按层选择滑动窗口。",
+  "outcomes": [
+    "读取当前层的 attention 类型",
+    "保存 head / GQA / 缩放关系",
+    "建立 Q/K/V/O 投影",
+    "新增 QK-Norm"
+  ],
+  "runtime_context": "上游 transformers.models.qwen3.modeling_qwen3 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 010，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 6,
+      "title": "接口与本课位置",
+      "why": "在已掌握 Llama GQA 的基础上比较 Qwen3：每个 head 上额外做 QK-Norm，并按层选择滑动窗口。"
+    },
+    {
+      "start": 7,
+      "end": 9,
+      "title": "读取当前层的 attention 类型",
+      "why": "有些配置让不同层使用不同窗口策略。"
+    },
+    {
+      "start": 10,
+      "end": 15,
+      "title": "保存 head / GQA / 缩放关系",
+      "why": "这些基础关系与已学过的 Llama Attention 对应。"
+    },
+    {
+      "start": 16,
+      "end": 27,
+      "title": "建立 Q/K/V/O 投影",
+      "why": "Query 与 KV 的头数仍可不同。"
+    },
+    {
+      "start": 28,
+      "end": 40,
+      "title": "新增 QK-Norm",
+      "why": "归一化仅作用在每个 head 的 d 轴，不是对 H×d 一起归一化。"
+    },
+    {
+      "start": 41,
+      "end": 43,
+      "title": "保留输入前缀并分头",
+      "why": "用于后面的标准 attention 布局。"
+    },
+    {
+      "start": 44,
+      "end": 47,
+      "title": "投影之后、换轴之前做逐头 norm",
+      "why": "此时最后轴仍是 d；K 也按同样方式归一化，V 不做 QK-Norm。"
+    },
+    {
+      "start": 48,
+      "end": 55,
+      "title": "施加 RoPE 并衔接缓存",
+      "why": "与 Llama 的 cache/位置机制比较，避免只注意新加的 norm。"
+    },
+    {
+      "start": 56,
+      "end": 71,
+      "title": "传入后端及窗口信息",
+      "why": "sliding_window 是这里相对 Llama 版本的重要额外参数。"
+    },
+    {
+      "start": 72,
+      "end": 74,
+      "title": "合头后投影回 D",
+      "why": "保持模块与上层 decoder 的接口兼容。"
+    }
+  ],
+  "symbols": {
+    "ALL_ATTENTION_FUNCTIONS": "Transformers 的 attention 后端注册表；不是训练模型的参数或缓存。",
+    "Cache": "Transformers 的缓存接口。本课 decode 观察使用 DynamicCache。",
+    "Callable": "可调用对象的类型注解；这里描述选中的 attention 后端函数。",
+    "FlashAttentionKwargs": "上游 attention 后端额外参数的类型描述。",
+    "Linear": "可训练线性层：y = xWᵀ + b；weight 存储顺序为 [输出通道, 输入通道]。",
+    "LongTensor": "整数张量类型，用于序列位置索引；本课实际 cache_position 为 int64。",
+    "Module": "PyTorch 模块基类，负责子模块、参数、train/eval 状态与梯度相关行为。",
+    "Qwen3Attention": "Qwen3 的带 QK-Norm 的 GQA Attention。",
+    "Qwen3Config": "Qwen3 模型配置。",
+    "Qwen3RMSNorm": "用于逐 head 的 RMSNorm，实现宽度为 head_dim。",
+    "Tensor": "PyTorch 张量类型注解。实际 shape、dtype 和小样本值见当前运行观察。",
+    "Unpack": "类型系统中展开 TypedDict 结构的标记，不会执行张量展开操作。",
+    "__init__": "构造模型配置和可训练的投影层。它不是每个 token 都重新运行的计算。",
+    "_attn_implementation": "配置选择的 attention 后端名称。本课固定为 eager，以便观察真实权重和数据流。",
+    "apply_rotary_pos_emb": "用 cos/sin 旋转 Q 和 K 的特征对子，编码 token 位置；不改变它们的 shape。",
+    "attention_bias": "配置中的布尔开关。不要只让代码在 bias=False 的一种配置下能运行。",
+    "attention_dropout": "配置给出的训练时 attention dropout 概率，不等于 eval 时实际传入的值。",
+    "attention_interface": "配置选择的 attention 可调用函数。本课绑定 eager_attention_forward。",
+    "attention_mask": "加到 attention logits 上的可广播 mask；[B,1,T,S] 中 S 是可见的 K/V 总长度。",
+    "attn_output": "各 token 的 attention 结果。后端先返回 [B,T,H,d]，随后合头并投影回 [B,T,D]。",
+    "attn_weights": "本课 eager 路径的 attention 权重，shape 为 [B,H,T,S]；S 包括可见的历史缓存长度。",
+    "bias": "是否创建偏置参数的构造参数；由 attention_bias 决定。",
+    "cache_kwargs": "传给缓存更新器的位置资料字典。DynamicCache 与静态缓存可能使用不同字段。",
+    "cache_position": "本次 token 在完整序列中的位置索引；不是本批次内部从零开始的下标。",
+    "config": "本课模块的配置对象；配置字段的实际值见对应属性的运行观察。",
+    "contiguous": "按当前轴顺序整理连续内存布局，不改变逻辑 shape。",
+    "cos": "RoPE 或余弦调度中的余弦值；具体角色由本行说明确定。",
+    "dropout": "本次运算使用的 dropout 概率，训练和推理可能不同。",
+    "eager_attention_forward": "普通 PyTorch attention 路径：对齐 KV 头、QK 缩放点积、mask、softmax、dropout、加权 V。",
+    "eps": "归一化分母的稳定项 epsilon。",
+    "forward": "实际执行一次 attention 计算，处理当前输入并可更新 KV cache。",
+    "get_interface": "从后端注册表中根据配置取实现，并接受 eager 作为对应的默认实现。",
+    "getattr": "读取属性，可给出缺失时的默认值。",
+    "hasattr": "检查对象是否具有某属性。",
+    "head_dim": "每一个 attention head 的特征宽度 d。与整个 hidden_size D 不是同一个量。",
+    "hidden_shape": "投影后分头所用的 [B,T,-1,d] 模板，-1 会随 Q 与 K/V 的宽度分别推断。",
+    "hidden_size": "decoder 隐藏表示的宽度 D，也就是进入和离开 attention 子层的最后一维。",
+    "hidden_states": "当前层收到的 token 表示，常用布局是 [B,T,D]。它不是缓存中的历史 K/V。",
+    "input_shape": "去掉 hidden_size 后保存的输入前缀形状，即 [B,T]；用于最终合头。",
+    "int": "Python 整数类型注解；这里不意味着会自动做类型转换。",
+    "is_causal": "标记模块具有因果语义；在本课 eager 路径中仍需传入实际的 causal mask。",
+    "k_norm": "K 每个 head 的归一化层。",
+    "k_proj": "独立可训练的 Key 投影，输出 KV×d 个通道，而不一定是 H×d。",
+    "key_states": "Key 向量，当前投影先得到 [B,KV,T,d]；cache 更新后 token 轴可变成完整的 S。",
+    "kwargs": "继续转交给下层计算的额外具名参数。",
+    "layer_idx": "当前 decoder 层的下标，供 KV cache 定位该层的数据。本课单层模型使用 0。",
+    "layer_type": "当前层的全局或滑动 attention 类型。",
+    "layer_types": "按 decoder 层记录 attention 类型的配置列表。",
+    "nn": "torch.nn 命名空间，提供 Module、Linear 等神经网络组件。",
+    "num_attention_heads": "Query head 数 H。GQA 里它可以多于 K/V head 数。",
+    "num_key_value_groups": "每个 KV head 对应的 Query head 数。后端据此对齐 K/V 与 Q。",
+    "num_key_value_heads": "K 和 V 的 head 数 KV；共享 KV 头是 GQA 减少缓存和投影开销的关键。",
+    "o_proj": "合头后的输出线性投影，把 H×d 映射回 hidden_size D。",
+    "past_key_values": "存储各层历史 K/V 的 Cache 对象。decode 时会原地增长，并返回拼接后的 K/V。",
+    "position_embeddings": "由上层 rotary embedding 计算出的 (cos,sin)，不是加到 hidden_states 上的普通位置向量。",
+    "q_norm": "Q 每个 head 的归一化层。",
+    "q_proj": "独立可训练的 Query 线性投影，输入 D 个通道，输出 H×d 个通道。",
+    "query_states": "当前 token 的 Query 向量，分头后为 [B,H,T,d]；经过 RoPE 后 shape 不变但数值改变。",
+    "reshape": "在保持元素数量的前提下重排形状，必要时可能分配新存储；这里把多个 head 合并。",
+    "rms_norm_eps": "QK-Norm 的 epsilon。",
+    "scaling": "attention 点积的缩放因子；改变 softmax 前 logits 的幅值。",
+    "self": "当前这一层 LlamaAttention 对象；其中保存配置、投影参数和训练状态。",
+    "shape": "张量各轴的大小。读取 shape 不会复制数据，也不会改变张量。",
+    "sin": "RoPE 位置角度的正弦表，与 cos 配对使用。它不是 attention 权重。",
+    "sliding_window": "当前层可能使用的局部窗口长度，非滑动层为 None。",
+    "super": "调用父类 nn.Module 的初始化逻辑，让后续子模块和参数正确注册。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "training": "nn.Module 的运行状态，由 .train() / .eval() 切换，不是一个可训练参数。",
+    "transpose": "交换两个轴的位置，通常不复制底层数据。本课把 [B,T,heads,d] 换成 [B,heads,T,d]。",
+    "tuple": "二元组/序列的 Python 类型注解；位置表和 forward 返回值都使用二元组。",
+    "update": "更新当前层缓存，并返回可用于 attention 的完整 K/V；它不只是修改对象而没有返回值。",
+    "use_kernelized_func": "上游提供的装饰器：为模块挂接可选 kernel 函数。本课不启用远程 kernel。",
+    "v_proj": "独立可训练的 Value 投影，输出 KV×d 个通道，供注意力权重加权。",
+    "value_states": "Value 向量；可能与历史 V 拼接，最终被 attention 权重加权求和。",
+    "view": "在满足布局要求时重新解释张量形状，不改变元素数量。这里用于把最后一维拆成 heads 和 d。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 28,
+      "end": 28,
+      "replacement": "        __BLANK_1__  # 构造逐头 norm",
+      "title": "构造逐头 norm",
+      "goal": "归一化宽度应匹配每个 head。"
+    },
+    {
+      "id": 2,
+      "start": 44,
+      "end": 44,
+      "replacement": "        __BLANK_2__  # Query QK-Norm",
+      "title": "Query QK-Norm",
+      "goal": "把 norm 放在正确的轴布局上。"
+    },
+    {
+      "id": 3,
+      "start": 45,
+      "end": 45,
+      "replacement": "        __BLANK_3__  # Key QK-Norm",
+      "title": "Key QK-Norm",
+      "goal": "K 的头数仍取 KV 头数。"
+    },
+    {
+      "id": 4,
+      "start": 72,
+      "end": 72,
+      "replacement": "        __BLANK_4__  # 恢复模型布局",
+      "title": "恢复模型布局",
+      "goal": "合头且不丢失 token 顺序。"
+    }
+  ]
+}

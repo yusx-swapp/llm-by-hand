@@ -1,0 +1,18 @@
+{
+  "id": "lm_loss",
+  "title": "Causal-LM loss：shift 与 ignore_index",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.loss.loss_utils",
+  "symbol": "ForCausalLMLoss",
+  "kind": "function",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/loss/loss_utils.py",
+  "first_line": 45,
+  "last_line": 67,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/loss/loss_utils.py#L45-L67",
+  "sha256": "c7f950f4eb7eba01f9339bc4937c9e1cc2885cf1c1bc116d764990c694a90ff9",
+  "module_sha256": "3df3438f0cb80cb7b903d6d06f522839756f4ca9301a02d793748ae099c27d9f",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

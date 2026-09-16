@@ -1,0 +1,18 @@
+{
+  "id": "sft_collator",
+  "title": "SFT：只对 completion / assistant 训练",
+  "version": "1.1.0",
+  "package": "trl",
+  "module": "trl.trainer.sft_trainer",
+  "symbol": "DataCollatorForLanguageModeling.torch_call",
+  "kind": "method",
+  "origin": "Installed trl wheel; exact source excerpt; no remote fetch",
+  "source_file": "trl/trainer/sft_trainer.py",
+  "first_line": 170,
+  "last_line": 258,
+  "upstream_url": "https://github.com/huggingface/trl/blob/v1.1.0/trl/trainer/sft_trainer.py#L170-L258",
+  "sha256": "8f10a9b921a124909a2067e23e5ba41e2f06a1059e5264755a1fd68b7c24164f",
+  "module_sha256": "8bed6a5ed638a8e2d0b740fb2fe2e08c45b36919e0898ca7fd161bdc3440a2bd",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

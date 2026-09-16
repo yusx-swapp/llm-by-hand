@@ -1,0 +1,18 @@
+{
+  "id": "moe_block",
+  "title": "MoE block：路由与专家组成一层",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.models.mixtral.modeling_mixtral",
+  "symbol": "MixtralSparseMoeBlock",
+  "kind": "class",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/models/mixtral/modeling_mixtral.py",
+  "first_line": 120,
+  "last_line": 136,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/models/mixtral/modeling_mixtral.py#L120-L136",
+  "sha256": "c3d9df873618aa3a7098e4511f8848009a2305199b56e01fc73f108eeefcd72c",
+  "module_sha256": "3a951131b75737658d409ad01143c91735ba6d68f3d25cea7ac729ccfff1be85",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

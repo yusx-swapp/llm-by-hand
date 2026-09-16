@@ -1,0 +1,184 @@
+{
+  "subtitle": "MLA：低秩 Q / KV 与解耦 RoPE",
+  "context": "理解 DeepSeek MLA 与普通 GQA 的区别：Q/KV 可经过低秩压缩与归一化，位置部分与非位置部分分开处理。",
+  "outcomes": [
+    "选择直接 Q 投影还是低秩 Q 路径",
+    "把 Q 拆成非位置与位置两部分",
+    "从压缩 KV 恢复内容向量",
+    "分开处理 RoPE 分量"
+  ],
+  "runtime_context": "上游 transformers.models.deepseek_v3.modeling_deepseek_v3 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 015，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 13,
+      "title": "接口与本课位置",
+      "why": "理解 DeepSeek MLA 与普通 GQA 的区别：Q/KV 可经过低秩压缩与归一化，位置部分与非位置部分分开处理。"
+    },
+    {
+      "start": 14,
+      "end": 17,
+      "title": "选择直接 Q 投影还是低秩 Q 路径",
+      "why": "低秩路径先压缩、归一化，再投影回每个 head 的 Q。"
+    },
+    {
+      "start": 18,
+      "end": 18,
+      "title": "把 Q 拆成非位置与位置两部分",
+      "why": "qk_nope_head_dim 与 qk_rope_head_dim 各自承担不同作用。"
+    },
+    {
+      "start": 19,
+      "end": 20,
+      "title": "分开处理 RoPE 分量",
+      "why": "只有 rotary 部分旋转，内容部分直接保留。"
+    },
+    {
+      "start": 21,
+      "end": 29,
+      "title": "从压缩 KV 恢复内容向量",
+      "why": "共享压缩表示与独立位置分量一起构成 Key；Value 使用另一部分输出。"
+    },
+    {
+      "start": 30,
+      "end": 35,
+      "title": "选择位置特征配对方式",
+      "why": "交错与半分方式的特征配对不同，不能只看 shape 相同。"
+    },
+    {
+      "start": 36,
+      "end": 38,
+      "title": "把位置与内容部分组合回 Q/K",
+      "why": "位置 Key 需要在 head 轴广播到各查询头。"
+    },
+    {
+      "start": 39,
+      "end": 46,
+      "title": "接回完整历史 KV",
+      "why": "保持层编号和本次位置语义。"
+    },
+    {
+      "start": 47,
+      "end": 64,
+      "title": "调用实际 attention 后端",
+      "why": "保留 MLA 恢复后的 Q/K/V 维度与缩放值。"
+    },
+    {
+      "start": 65,
+      "end": 67,
+      "title": "合头并投影回 hidden_size",
+      "why": "V 的每头宽度可能与 Q/K 的宽度不同。"
+    }
+  ],
+  "symbols": {
+    "ALL_ATTENTION_FUNCTIONS": "Transformers 的 attention 后端注册表；不是训练模型的参数或缓存。",
+    "Cache": "Transformers 的缓存接口。本课 decode 观察使用 DynamicCache。",
+    "Callable": "可调用对象的类型注解；这里描述选中的 attention 后端函数。",
+    "F": "torch.nn.functional：不额外保存参数的神经网络运算。",
+    "FlashAttentionKwargs": "上游 attention 后端额外参数的类型描述。",
+    "LongTensor": "整数张量类型，用于序列位置索引；本课实际 cache_position 为 int64。",
+    "Tensor": "PyTorch 张量类型注解。实际 shape、dtype 和小样本值见当前运行观察。",
+    "Unpack": "类型系统中展开 TypedDict 结构的标记，不会执行张量展开操作。",
+    "_attn_implementation": "配置选择的 attention 后端名称。本课固定为 eager，以便观察真实权重和数据流。",
+    "apply_rotary_pos_emb": "用 cos/sin 旋转 Q 和 K 的特征对子，编码 token 位置；不改变它们的 shape。",
+    "apply_rotary_pos_emb_interleave": "使用交错配对规则的 RoPE 实现。",
+    "attention_dropout": "配置给出的训练时 attention dropout 概率，不等于 eval 时实际传入的值。",
+    "attention_interface": "配置选择的 attention 可调用函数。本课绑定 eager_attention_forward。",
+    "attention_mask": "加到 attention logits 上的可广播 mask；[B,1,T,S] 中 S 是可见的 K/V 总长度。",
+    "attn_output": "各 token 的 attention 结果。后端先返回 [B,T,H,d]，随后合头并投影回 [B,T,D]。",
+    "attn_weights": "本课 eager 路径的 attention 权重，shape 为 [B,H,T,S]；S 包括可见的历史缓存长度。",
+    "batch_size": "输入 batch 中的样本数 B。",
+    "cache_kwargs": "传给缓存更新器的位置资料字典。DynamicCache 与静态缓存可能使用不同字段。",
+    "cache_position": "本次 token 在完整序列中的位置索引；不是本批次内部从零开始的下标。",
+    "cat": "沿给定轴拼接多个 Tensor。",
+    "compressed_kv": "低秩 KV 内容表示，随后还需归一化和升维。",
+    "config": "本课模块的配置对象；配置字段的实际值见对应属性的运行观察。",
+    "contiguous": "按当前轴顺序整理连续内存布局，不改变逻辑 shape。",
+    "cos": "RoPE 或余弦调度中的余弦值；具体角色由本行说明确定。",
+    "dim": "本次 Tensor 操作选择的轴；-1 表示最后一轴，具体参见本行输入/输出 shape。",
+    "dropout": "本次运算使用的 dropout 概率，训练和推理可能不同。",
+    "eager_attention_forward": "普通 PyTorch attention 路径：对齐 KV 头、QK 缩放点积、mask、softmax、dropout、加权 V。",
+    "expand": "沿长度为 1 的轴创建广播视图，不分配每份副本。",
+    "forward": "实际执行一次 attention 计算，处理当前输入并可更新 KV cache。",
+    "get_interface": "从后端注册表中根据配置取实现，并接受 eager 作为对应的默认实现。",
+    "hidden_states": "当前层收到的 token 表示，常用布局是 [B,T,D]。它不是缓存中的历史 K/V。",
+    "is_flash_attention_requested": "检测是否选择 FlashAttention 后端；本课固定 eager，不执行专属 padding 分支。",
+    "k_pass": "K 的非 rotary 内容分量。",
+    "k_rot": "K 的 rotary 位置分量。",
+    "key_shape": "把恢复的内容 Key/Value 分成 head 的目标布局。",
+    "key_states": "Key 向量，当前投影先得到 [B,KV,T,d]；cache 更新后 token 轴可变成完整的 S。",
+    "kv_a_layernorm": "压缩 KV 表示的归一化。",
+    "kv_a_proj_with_mqa": "同时产生压缩 KV 与共享位置 Key 的投影。",
+    "kv_b_proj": "从压缩 KV 恢复每头内容 K/V 的投影。",
+    "kv_lora_rank": "共享 KV 压缩表示的宽度。",
+    "kwargs": "继续转交给下层计算的额外具名参数。",
+    "layer_idx": "当前 decoder 层的下标，供 KV cache 定位该层的数据。本课单层模型使用 0。",
+    "o_proj": "合头后的输出线性投影，把 H×d 映射回 hidden_size D。",
+    "pad": "在指定轴两端填充；labels 常用 ignore_index 而不是正常 token id。",
+    "past_key_values": "存储各层历史 K/V 的 Cache 对象。decode 时会原地增长，并返回拼接后的 K/V。",
+    "position_embeddings": "由上层 rotary embedding 计算出的 (cos,sin)，不是加到 hidden_states 上的普通位置向量。",
+    "q_a_layernorm": "低秩 Q 表示的归一化。",
+    "q_a_proj": "Q 的第一段低秩压缩投影。",
+    "q_b_proj": "从低秩 Q 恢复多个 head 的投影。",
+    "q_lora_rank": "Q 低秩瓶颈宽度；None 表示不使用低秩 Q。",
+    "q_pass": "Q 中不施加位置旋转的分量。",
+    "q_proj": "独立可训练的 Query 线性投影，输入 D 个通道，输出 H×d 个通道。",
+    "q_rot": "Q 中需要施加位置旋转的分量。",
+    "q_states": "Q 的中间投影结果，随后拆为 q_pass 与 q_rot。",
+    "qk_head_dim": "一个 Q/K head 中内容与旋转位置两部分的总宽度。",
+    "qk_nope_head_dim": "不应用 RoPE 的内容特征宽度。",
+    "qk_rope_head_dim": "应用 RoPE 的位置特征宽度。",
+    "query_shape": "把 Q 投影结果分成 head 的目标布局。",
+    "query_states": "当前 token 的 Query 向量，分头后为 [B,H,T,d]；经过 RoPE 后 shape 不变但数值改变。",
+    "reshape": "在保持元素数量的前提下重排形状，必要时可能分配新存储；这里把多个 head 合并。",
+    "rope_interleave": "配置选择的旋转特征配对方式。",
+    "scaling": "attention 点积的缩放因子；改变 softmax 前 logits 的幅值。",
+    "self": "当前这一层 LlamaAttention 对象；其中保存配置、投影参数和训练状态。",
+    "seq_length": "本次 Query 的 token 数 T，不包含缓存。",
+    "shape": "张量各轴的大小。读取 shape 不会复制数据，也不会改变张量。",
+    "sin": "RoPE 位置角度的正弦表，与 cos 配对使用。它不是 attention 权重。",
+    "split": "沿一个轴拆开 Tensor。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "training": "nn.Module 的运行状态，由 .train() / .eval() 切换，不是一个可训练参数。",
+    "transpose": "交换两个轴的位置，通常不复制底层数据。本课把 [B,T,heads,d] 换成 [B,heads,T,d]。",
+    "tuple": "二元组/序列的 Python 类型注解；位置表和 forward 返回值都使用二元组。",
+    "update": "更新当前层缓存，并返回可用于 attention 的完整 K/V；它不只是修改对象而没有返回值。",
+    "v_head_dim": "Value 每个 head 的宽度，不必等于 Q/K。",
+    "value_states": "Value 向量；可能与历史 V 拼接，最终被 attention 权重加权求和。",
+    "view": "在满足布局要求时重新解释张量形状，不改变元素数量。这里用于把最后一维拆成 heads 和 d。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 17,
+      "end": 17,
+      "replacement": "            __BLANK_1__  # 低秩 Query",
+      "title": "低秩 Query",
+      "goal": "连起压缩、norm 与恢复投影。"
+    },
+    {
+      "id": 2,
+      "start": 22,
+      "end": 22,
+      "replacement": "        __BLANK_2__  # 拆开 KV 与位置部分",
+      "title": "拆开 KV 与位置部分",
+      "goal": "按照两个不同宽度拆分最后一轴。"
+    },
+    {
+      "id": 3,
+      "start": 36,
+      "end": 36,
+      "replacement": "        __BLANK_3__  # 恢复 Query",
+      "title": "恢复 Query",
+      "goal": "拼接未旋转与已旋转的部分。"
+    },
+    {
+      "id": 4,
+      "start": 37,
+      "end": 37,
+      "replacement": "        __BLANK_4__  # 恢复 Key",
+      "title": "恢复 Key",
+      "goal": "把共享位置分量广播到正确的 head 数。"
+    }
+  ]
+}

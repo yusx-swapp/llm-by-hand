@@ -1,0 +1,18 @@
+{
+  "id": "qwen_attention",
+  "title": "Qwen3：QK-Norm 与 GQA",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.models.qwen3.modeling_qwen3",
+  "symbol": "Qwen3Attention",
+  "kind": "class",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/models/qwen3/modeling_qwen3.py",
+  "first_line": 221,
+  "last_line": 294,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/models/qwen3/modeling_qwen3.py#L221-L294",
+  "sha256": "a9fedbc3e2f9b3ed4db21df66c7830f054a799156dcba8af2a056870d058bbbe",
+  "module_sha256": "717050df2d791d6120d7071f1b300fb025a1a71aeccc09004e59936054b52a2e",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

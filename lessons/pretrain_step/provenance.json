@@ -1,0 +1,18 @@
+{
+  "id": "pretrain_step",
+  "title": "训练步：loss、梯度累积与 backward",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.trainer",
+  "symbol": "Trainer.training_step",
+  "kind": "method",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/trainer.py",
+  "first_line": 3771,
+  "last_line": 3840,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/trainer.py#L3771-L3840",
+  "sha256": "293387b06b9b0c39d0994ec1e52e71f7b65cb8f6d96a7a9a51d22621620b2001",
+  "module_sha256": "efe1e9eebdf4e1062c4d4704166cc8f81ffe252f9fcfde84bb948bffaabc178c",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

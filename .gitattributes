@@ -1,0 +1,10 @@
+* text=auto eol=lf
+# Source/observer fingerprints refer to exact bytes; do not normalize these on checkout.
+qk/*.py -text
+lessons/**/reference.py -text
+*.ttf -text
+*.woff -text
+*.woff2 -text
+*.png -text
+*.jpg -text
+*.jpeg -text

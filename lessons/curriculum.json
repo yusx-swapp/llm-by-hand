@@ -1,0 +1,248 @@
+{
+  "version": 1,
+  "title": "从 Multi-head Attention 到训练与生成",
+  "lessons": [
+    {
+      "id": "mha_core",
+      "number": 1,
+      "chapter": "基础",
+      "title": "Multi-head Attention：QKᵀ、softmax 与 V",
+      "family": "DistilBERT",
+      "module": "transformers.models.distilbert.modeling_distilbert",
+      "symbol": "eager_attention_forward",
+      "kind": "function",
+      "prerequisite": null
+    },
+    {
+      "id": "mha_projection",
+      "number": 2,
+      "chapter": "基础",
+      "title": "Multi-head Attention：投影、分头与合头",
+      "family": "DistilBERT",
+      "module": "transformers.models.distilbert.modeling_distilbert",
+      "symbol": "DistilBertSelfAttention.forward",
+      "kind": "method",
+      "prerequisite": "mha_core"
+    },
+    {
+      "id": "causal_mask",
+      "number": 3,
+      "chapter": "基础",
+      "title": "因果 mask 与历史 token",
+      "family": "Transformer",
+      "module": "transformers.modeling_attn_mask_utils",
+      "symbol": "AttentionMaskConverter._make_causal_mask",
+      "kind": "static",
+      "prerequisite": "mha_projection"
+    },
+    {
+      "id": "rms_norm",
+      "number": 4,
+      "chapter": "基础",
+      "title": "RMSNorm：归一化与数值精度",
+      "family": "Llama",
+      "module": "transformers.models.llama.modeling_llama",
+      "symbol": "LlamaRMSNorm",
+      "kind": "class",
+      "prerequisite": "causal_mask"
+    },
+    {
+      "id": "rope",
+      "number": 5,
+      "chapter": "基础",
+      "title": "RoPE：把位置编码到 Q / K",
+      "family": "Llama",
+      "module": "transformers.models.llama.modeling_llama",
+      "symbol": "apply_rotary_pos_emb",
+      "kind": "function",
+      "prerequisite": "rms_norm"
+    },
+    {
+      "id": "swiglu",
+      "number": 6,
+      "chapter": "基础",
+      "title": "SwiGLU：门控前馈网络",
+      "family": "Llama",
+      "module": "transformers.models.llama.modeling_llama",
+      "symbol": "LlamaMLP",
+      "kind": "class",
+      "prerequisite": "rope"
+    },
+    {
+      "id": "llama_attention",
+      "number": 7,
+      "chapter": "模型组装",
+      "title": "GQA Attention：位置与 KV Cache",
+      "family": "Llama",
+      "module": "transformers.models.llama.modeling_llama",
+      "symbol": "LlamaAttention",
+      "kind": "class",
+      "prerequisite": "swiglu"
+    },
+    {
+      "id": "decoder_layer",
+      "number": 8,
+      "chapter": "模型组装",
+      "title": "Decoder layer：残差、norm、attention、MLP",
+      "family": "Llama",
+      "module": "transformers.models.llama.modeling_llama",
+      "symbol": "LlamaDecoderLayer",
+      "kind": "class",
+      "prerequisite": "llama_attention"
+    },
+    {
+      "id": "causal_lm",
+      "number": 9,
+      "chapter": "模型组装",
+      "title": "LM head：从隐藏表示到 token logits",
+      "family": "Llama",
+      "module": "transformers.models.llama.modeling_llama",
+      "symbol": "LlamaForCausalLM.forward",
+      "kind": "method",
+      "prerequisite": "decoder_layer"
+    },
+    {
+      "id": "qwen_attention",
+      "number": 10,
+      "chapter": "流行架构",
+      "title": "Qwen3：QK-Norm 与 GQA",
+      "family": "Qwen3",
+      "module": "transformers.models.qwen3.modeling_qwen3",
+      "symbol": "Qwen3Attention",
+      "kind": "class",
+      "prerequisite": "causal_lm"
+    },
+    {
+      "id": "gemma_attention",
+      "number": 11,
+      "chapter": "流行架构",
+      "title": "Gemma：attention logits softcap",
+      "family": "Gemma2",
+      "module": "transformers.models.gemma2.modeling_gemma2",
+      "symbol": "eager_attention_forward",
+      "kind": "function",
+      "prerequisite": "qwen_attention"
+    },
+    {
+      "id": "moe_router",
+      "number": 12,
+      "chapter": "流行架构",
+      "title": "MoE router：选择与归一化 Top-K",
+      "family": "Qwen3-MoE",
+      "module": "transformers.models.qwen3_moe.modeling_qwen3_moe",
+      "symbol": "Qwen3MoeTopKRouter",
+      "kind": "class",
+      "prerequisite": "gemma_attention"
+    },
+    {
+      "id": "moe_experts",
+      "number": 13,
+      "chapter": "流行架构",
+      "title": "稀疏专家：分发 token 并加权聚合",
+      "family": "Mixtral",
+      "module": "transformers.models.mixtral.modeling_mixtral",
+      "symbol": "MixtralExperts.forward",
+      "kind": "method",
+      "prerequisite": "moe_router"
+    },
+    {
+      "id": "moe_block",
+      "number": 14,
+      "chapter": "流行架构",
+      "title": "MoE block：路由与专家组成一层",
+      "family": "Mixtral",
+      "module": "transformers.models.mixtral.modeling_mixtral",
+      "symbol": "MixtralSparseMoeBlock",
+      "kind": "class",
+      "prerequisite": "moe_experts"
+    },
+    {
+      "id": "mla_attention",
+      "number": 15,
+      "chapter": "流行架构",
+      "title": "MLA：低秩 Q / KV 与解耦 RoPE",
+      "family": "DeepSeek-V3",
+      "module": "transformers.models.deepseek_v3.modeling_deepseek_v3",
+      "symbol": "DeepseekV3Attention.forward",
+      "kind": "method",
+      "prerequisite": "moe_block"
+    },
+    {
+      "id": "lm_loss",
+      "number": 16,
+      "chapter": "Pretrain",
+      "title": "Causal-LM loss：shift 与 ignore_index",
+      "family": "Transformers",
+      "module": "transformers.loss.loss_utils",
+      "symbol": "ForCausalLMLoss",
+      "kind": "function",
+      "prerequisite": "mla_attention"
+    },
+    {
+      "id": "lm_collator",
+      "number": 17,
+      "chapter": "Pretrain",
+      "title": "预训练数据：组批、padding 与 labels",
+      "family": "Transformers",
+      "module": "transformers.data.data_collator",
+      "symbol": "DataCollatorForLanguageModeling.torch_call",
+      "kind": "method",
+      "prerequisite": "lm_loss"
+    },
+    {
+      "id": "lr_schedule",
+      "number": 18,
+      "chapter": "Pretrain",
+      "title": "学习率：warmup 与 cosine decay",
+      "family": "Transformers",
+      "module": "transformers.optimization",
+      "symbol": "_get_cosine_schedule_with_warmup_lr_lambda",
+      "kind": "function",
+      "prerequisite": "lm_collator"
+    },
+    {
+      "id": "pretrain_step",
+      "number": 19,
+      "chapter": "Pretrain",
+      "title": "训练步：loss、梯度累积与 backward",
+      "family": "Transformers Trainer",
+      "module": "transformers.trainer",
+      "symbol": "Trainer.training_step",
+      "kind": "method",
+      "prerequisite": "lr_schedule"
+    },
+    {
+      "id": "sft_collator",
+      "number": 20,
+      "chapter": "Post-train",
+      "title": "SFT：只对 completion / assistant 训练",
+      "family": "TRL SFT",
+      "module": "trl.trainer.sft_trainer",
+      "symbol": "DataCollatorForLanguageModeling.torch_call",
+      "kind": "method",
+      "prerequisite": "pretrain_step"
+    },
+    {
+      "id": "dpo_loss",
+      "number": 21,
+      "chapter": "Post-train",
+      "title": "DPO：policy / reference 的偏好损失",
+      "family": "TRL DPO",
+      "module": "trl.trainer.dpo_trainer",
+      "symbol": "DPOTrainer._compute_loss",
+      "kind": "method",
+      "prerequisite": "sft_collator"
+    },
+    {
+      "id": "top_p",
+      "number": 22,
+      "chapter": "生成与串联",
+      "title": "Top-p：从 logits 到可采样分布",
+      "family": "Transformers Generation",
+      "module": "transformers.generation.logits_process",
+      "symbol": "TopPLogitsWarper.__call__",
+      "kind": "method",
+      "prerequisite": "dpo_loss"
+    }
+  ]
+}

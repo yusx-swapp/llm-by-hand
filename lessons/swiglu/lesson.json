@@ -1,0 +1,83 @@
+{
+  "subtitle": "SwiGLU：门控前馈网络",
+  "context": "把 Attention 之外的可训练非线性路径补齐：一条分支做门控，另一条提供内容，再降回隐藏维度。",
+  "outcomes": [
+    "记录输入与中间维度",
+    "建立门控与内容两条升维投影",
+    "建立降维投影并选择激活函数",
+    "执行门控前馈网络"
+  ],
+  "runtime_context": "上游 transformers.models.llama.modeling_llama 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 006，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 4,
+      "title": "接口与本课位置",
+      "why": "把 Attention 之外的可训练非线性路径补齐：一条分支做门控，另一条提供内容，再降回隐藏维度。"
+    },
+    {
+      "start": 5,
+      "end": 6,
+      "title": "记录输入与中间维度",
+      "why": "中间维度通常大于 D，但最终要回到 D 以做残差连接。"
+    },
+    {
+      "start": 7,
+      "end": 8,
+      "title": "建立门控与内容两条升维投影",
+      "why": "gate_proj 经激活后与 up_proj 的输出逐元素相乘。"
+    },
+    {
+      "start": 9,
+      "end": 12,
+      "title": "建立降维投影并选择激活函数",
+      "why": "激活由配置选择；Llama 的常用配置是 SiLU。"
+    },
+    {
+      "start": 13,
+      "end": 14,
+      "title": "执行门控前馈网络",
+      "why": "先在中间表示空间相乘，再 down_proj；不能先降维再相乘。"
+    }
+  ],
+  "symbols": {
+    "ACT2FN": "激活函数名称到实现的上游映射。",
+    "Linear": "可训练线性层：y = xWᵀ + b；weight 存储顺序为 [输出通道, 输入通道]。",
+    "LlamaMLP": "Llama decoder 的门控前馈子模块。",
+    "Module": "PyTorch 模块基类，负责子模块、参数、train/eval 状态与梯度相关行为。",
+    "__init__": "构造模型配置和可训练的投影层。它不是每个 token 都重新运行的计算。",
+    "act_fn": "由配置选择的实际激活函数。",
+    "bias": "是否创建偏置参数的构造参数；由 attention_bias 决定。",
+    "config": "本课模块的配置对象；配置字段的实际值见对应属性的运行观察。",
+    "down_proj": "属性表示降维层；forward 中同名局部变量表示最终输出。",
+    "forward": "实际执行一次 attention 计算，处理当前输入并可更新 KV cache。",
+    "gate_proj": "经激活产生门控的升维投影。",
+    "hidden_act": "配置中的激活函数名称。",
+    "hidden_size": "decoder 隐藏表示的宽度 D，也就是进入和离开 attention 子层的最后一维。",
+    "intermediate_size": "门控/内容分支扩展到的中间宽度。",
+    "mlp_bias": "是否创建 MLP 各投影的 bias。",
+    "nn": "torch.nn 命名空间，提供 Module、Linear 等神经网络组件。",
+    "self": "当前这一层 LlamaAttention 对象；其中保存配置、投影参数和训练状态。",
+    "super": "调用父类 nn.Module 的初始化逻辑，让后续子模块和参数正确注册。",
+    "up_proj": "提供待门控内容的独立升维投影。",
+    "x": "本课计算接收的输入；请结合当前语句的 shape 和课程目的理解它。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 9,
+      "end": 9,
+      "replacement": "        __BLANK_1__  # 降维层",
+      "title": "降维层",
+      "goal": "正确选择输入/输出通道。"
+    },
+    {
+      "id": 2,
+      "start": 13,
+      "end": 13,
+      "replacement": "        __BLANK_2__  # 门控计算",
+      "title": "门控计算",
+      "goal": "把激活门控、内容分支和降维连起来。"
+    }
+  ]
+}

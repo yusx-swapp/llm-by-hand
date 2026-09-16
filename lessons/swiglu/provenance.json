@@ -1,0 +1,18 @@
+{
+  "id": "swiglu",
+  "title": "SwiGLU：门控前馈网络",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.models.llama.modeling_llama",
+  "symbol": "LlamaMLP",
+  "kind": "class",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/models/llama/modeling_llama.py",
+  "first_line": 170,
+  "last_line": 183,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/models/llama/modeling_llama.py#L170-L183",
+  "sha256": "c35b6e992834901a86bdaa4f6df75407051095fe23ea0ccdbc30bf302005f90c",
+  "module_sha256": "87dfc080e7c12b49cdd70bd0c47cc725701fcc54dd8542f301bb0a6c7e8b1e16",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

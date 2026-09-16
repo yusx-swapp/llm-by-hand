@@ -1,0 +1,18 @@
+{
+  "id": "mha_projection",
+  "title": "Multi-head Attention：投影、分头与合头",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.models.distilbert.modeling_distilbert",
+  "symbol": "DistilBertSelfAttention.forward",
+  "kind": "method",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/models/distilbert/modeling_distilbert.py",
+  "first_line": 175,
+  "last_line": 205,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/models/distilbert/modeling_distilbert.py#L175-L205",
+  "sha256": "303fd436352bc09e29ea2647d7fdb5b24134f3f5f971d3ed164fe8eb4fd43758",
+  "module_sha256": "e8256f2052ceb60549bf9a5bf6e4aeb03aa19512cf95a0d045f300c913cdb0b8",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

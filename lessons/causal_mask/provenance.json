@@ -1,0 +1,18 @@
+{
+  "id": "causal_mask",
+  "title": "因果 mask 与历史 token",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.modeling_attn_mask_utils",
+  "symbol": "AttentionMaskConverter._make_causal_mask",
+  "kind": "static",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/modeling_attn_mask_utils.py",
+  "first_line": 152,
+  "last_line": 184,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/modeling_attn_mask_utils.py#L152-L184",
+  "sha256": "6a333779084c08abd5b41135714f47cec976e7059f6297727f446e977bde775f",
+  "module_sha256": "26f43953fc24e279d246aa2776dcd9ba11cd6e7e962cce69bc9d61b3e3564c6c",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

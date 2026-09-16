@@ -1,0 +1,18 @@
+{
+  "id": "mla_attention",
+  "title": "MLA：低秩 Q / KV 与解耦 RoPE",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.models.deepseek_v3.modeling_deepseek_v3",
+  "symbol": "DeepseekV3Attention.forward",
+  "kind": "method",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/models/deepseek_v3/modeling_deepseek_v3.py",
+  "first_line": 416,
+  "last_line": 482,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/models/deepseek_v3/modeling_deepseek_v3.py#L416-L482",
+  "sha256": "3db346f92b97815d6782c26b9da56afc73e29f84a0e6edf32c43046cf89f33d4",
+  "module_sha256": "81fdffb06ed42c18e0bbed68f887a974bc8b99f3b5c00a2275f0ed0e1f817011",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

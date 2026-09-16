@@ -1,0 +1,18 @@
+{
+  "id": "moe_router",
+  "title": "MoE router：选择与归一化 Top-K",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.models.qwen3_moe.modeling_qwen3_moe",
+  "symbol": "Qwen3MoeTopKRouter",
+  "kind": "class",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/models/qwen3_moe/modeling_qwen3_moe.py",
+  "first_line": 257,
+  "last_line": 275,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/models/qwen3_moe/modeling_qwen3_moe.py#L257-L275",
+  "sha256": "73f13ad44c995f9217e1a644aad9ad29bd5696992bd0e59bdb77348c782b5937",
+  "module_sha256": "b4c505a10f12dd4fc111f518dd7900daa6b1a860a41bcd14ea5a2c01b3666609",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

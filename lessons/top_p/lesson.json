@@ -1,0 +1,108 @@
+{
+  "subtitle": "Top-p：从 logits 到可采样分布",
+  "context": "训练后走到生成：把模型 logits 转成可采样集合。Top-p 不是固定保留 K 个 token，而是按累计概率控制尾部。",
+  "outcomes": [
+    "先按得分排序",
+    "计算排序后的累计概率",
+    "去掉低概率尾部",
+    "至少保留指定数量 token"
+  ],
+  "runtime_context": "上游 transformers.generation.logits_process 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 022，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 2,
+      "title": "接口与本课位置",
+      "why": "训练后走到生成：把模型 logits 转成可采样集合。Top-p 不是固定保留 K 个 token，而是按累计概率控制尾部。"
+    },
+    {
+      "start": 3,
+      "end": 3,
+      "title": "先按得分排序",
+      "why": "此实现采用升序，阈值判断也必须与这个方向一致。"
+    },
+    {
+      "start": 4,
+      "end": 6,
+      "title": "计算排序后的累计概率",
+      "why": "在词表轴上做 softmax 和 cumsum。"
+    },
+    {
+      "start": 7,
+      "end": 8,
+      "title": "去掉低概率尾部",
+      "why": "升序实现屏蔽累计概率不超过 1-top_p 的部分。"
+    },
+    {
+      "start": 9,
+      "end": 11,
+      "title": "至少保留指定数量 token",
+      "why": "即使分布很尖，也不能全部屏蔽。"
+    },
+    {
+      "start": 12,
+      "end": 12,
+      "title": "把 mask 放回原词表编号",
+      "why": "sorted_indices 不等于 token 本身的自然顺序。"
+    },
+    {
+      "start": 13,
+      "end": 14,
+      "title": "把不可采样项改成 filter_value",
+      "why": "通常是 -inf；之后再 softmax/采样，而不是在这里直接产生 token id。"
+    }
+  ],
+  "symbols": {
+    "FloatTensor": "浮点 Tensor 的类型注解；运行 dtype 仍取决于实际输入。",
+    "LOGITS_PROCESSOR_INPUTS_DOCSTRING": "生成阶段 logits processor 的公共接口文档。",
+    "LongTensor": "整数张量类型，用于序列位置索引；本课实际 cache_position 为 int64。",
+    "__call__": "训练后走到生成：把模型 logits 转成可采样集合。Top-p 不是固定保留 K 个 token，而是按累计概率控制尾部。",
+    "add_start_docstrings": "为 API 加上公共文档内容，不是模型数学运算。",
+    "cumsum": "沿指定轴的累计和。",
+    "cumulative_probs": "升序词表分布上的累计概率。",
+    "descending": "是否降序排序；本实现显式设为 False。",
+    "dim": "本次 Tensor 操作选择的轴；-1 表示最后一轴，具体参见本行输入/输出 shape。",
+    "filter_value": "屏蔽位置填入的值，通常为负无穷。",
+    "indices_to_remove": "映射回原词表编号后的屏蔽 mask。",
+    "input_ids": "token 的整数编号，常用 shape [B,T]；还不是 embedding 向量。",
+    "masked_fill": "按布尔 mask 填值，返回新 Tensor。",
+    "min_tokens_to_keep": "至少保留的可采样 token 个数。",
+    "scatter": "按下标把排序空间中的结果放回目标位置。",
+    "scores": "模型给出的词表 logits，[B,V]。",
+    "scores_processed": "已把低概率尾部屏蔽的 logits。",
+    "self": "当前这一层 LlamaAttention 对象；其中保存配置、投影参数和训练状态。",
+    "softmax": "在指定轴上把 logits 变成归一化概率。",
+    "sort": "返回排序后的值及它们在原 Tensor 中的下标。",
+    "sorted_indices": "排序位置对应的原词表编号。",
+    "sorted_indices_to_remove": "排序空间中的屏蔽 mask。",
+    "sorted_logits": "按升序排过的 logits。",
+    "top_p": "需要保留的累计概率质量。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 4,
+      "end": 4,
+      "replacement": "        __BLANK_1__  # 累计概率",
+      "title": "累计概率",
+      "goal": "归一化与累计都在词表轴进行。"
+    },
+    {
+      "id": 2,
+      "start": 7,
+      "end": 7,
+      "replacement": "        __BLANK_2__  # 选择概率尾部",
+      "title": "选择概率尾部",
+      "goal": "注意升序与 1-top_p 的关系。"
+    },
+    {
+      "id": 3,
+      "start": 12,
+      "end": 12,
+      "replacement": "        __BLANK_3__  # 回到原 token 编号",
+      "title": "回到原 token 编号",
+      "goal": "不要直接用排序空间 mask 覆盖原 logits。"
+    }
+  ]
+}

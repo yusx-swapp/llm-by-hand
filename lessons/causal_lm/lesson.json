@@ -1,0 +1,114 @@
+{
+  "subtitle": "LM head：从隐藏表示到 token logits",
+  "context": "把 decoder 隐藏表示投影到词表，按需要计算下一 token 的 loss；后续训练与生成都使用这份接口。",
+  "outcomes": [
+    "调用完整的底层 LlamaModel",
+    "取出最后一层的 token 表示",
+    "只计算需要的时间位置",
+    "把隐藏通道映射到词表"
+  ],
+  "runtime_context": "上游 transformers.models.llama.modeling_llama 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 009，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 32,
+      "title": "接口与本课位置",
+      "why": "把 decoder 隐藏表示投影到词表，按需要计算下一 token 的 loss；后续训练与生成都使用这份接口。"
+    },
+    {
+      "start": 33,
+      "end": 43,
+      "title": "调用完整的底层 LlamaModel",
+      "why": "模型主体处理 embedding、decoder 层、最后的 norm；上层继续负责词表投影与监督损失。"
+    },
+    {
+      "start": 44,
+      "end": 45,
+      "title": "取出最后一层的 token 表示",
+      "why": "不是从 attention 权重生成 token；用于 LM head 的是最后 hidden states。"
+    },
+    {
+      "start": 46,
+      "end": 46,
+      "title": "只计算需要的时间位置",
+      "why": "生成时可以仅保留最后若干位置，训练时一般需要完整 token 序列。"
+    },
+    {
+      "start": 47,
+      "end": 49,
+      "title": "把隐藏通道映射到词表",
+      "why": "得到 [B,T,V] 的 logits，还没有做采样，也不是概率。"
+    },
+    {
+      "start": 50,
+      "end": 52,
+      "title": "有监督目标才计算 loss",
+      "why": "通过 loss_function 连接下一课的 causal-LM 目标。"
+    },
+    {
+      "start": 53,
+      "end": 59,
+      "title": "按 Transformers 接口返回结果",
+      "why": "保留 loss、logits、cache 等字段，才能被 Trainer 和生成代码使用。"
+    }
+  ],
+  "symbols": {
+    "BaseModelOutputWithPast": "底层模型的结构化输出类型。",
+    "Cache": "Transformers 的缓存接口。本课 decode 观察使用 DynamicCache。",
+    "CausalLMOutputWithPast": "带 logits、loss 和可选缓存的语言模型输出类型。",
+    "FloatTensor": "浮点 Tensor 的类型注解；运行 dtype 仍取决于实际输入。",
+    "LongTensor": "整数张量类型，用于序列位置索引；本课实际 cache_position 为 int64。",
+    "Tensor": "PyTorch 张量类型注解。实际 shape、dtype 和小样本值见当前运行观察。",
+    "TransformersKwargs": "Transformers 对额外调用参数的类型描述，不是运行时的张量数据。",
+    "Unpack": "类型系统中展开 TypedDict 结构的标记，不会执行张量展开操作。",
+    "attention_mask": "加到 attention logits 上的可广播 mask；[B,1,T,S] 中 S 是可见的 K/V 总长度。",
+    "attentions": "各层返回的可选 attention 信息。",
+    "auto_docstring": "上游文档生成装饰器；课程运行器跳过其文档生成副作用，reference 本身不改写。",
+    "bool": "布尔值或布尔 Tensor 转换。",
+    "cache_position": "本次 token 在完整序列中的位置索引；不是本批次内部从零开始的下标。",
+    "can_return_tuple": "保留上游在结构化输出与元组之间切换的运行兼容逻辑。",
+    "config": "本课模块的配置对象；配置字段的实际值见对应属性的运行观察。",
+    "forward": "实际执行一次 attention 计算，处理当前输入并可更新 KV cache。",
+    "hidden_states": "此处为底层模型的最后隐藏表示，随后送入词表头。",
+    "input_ids": "token 的整数编号，常用 shape [B,T]；还不是 embedding 向量。",
+    "inputs_embeds": "可直接提供已计算的 embedding，与 token id 输入是不同入口。",
+    "int": "Python 整数类型注解；这里不意味着会自动做类型转换。",
+    "isinstance": "判断对象所属的类型，从而选择数据处理路径。",
+    "kwargs": "继续转交给下层计算的额外具名参数。",
+    "labels": "监督目标的 token 编号；-100 位置会被损失忽略。",
+    "last_hidden_state": "模型最后的 token 表示，不是每层历史的列表。",
+    "lm_head": "从 hidden_size 到 vocab_size 的输出投影。",
+    "logits": "词表上的未归一化得分，最后一维为 vocab_size。",
+    "logits_to_keep": "需要保留哪些 token 位置的 logits；0 表示全部。",
+    "loss": "本次监督目标的标量损失；没有 labels 时为 None。",
+    "loss_function": "模型采用的监督损失入口。",
+    "model": "这里指底层 LlamaModel 主体。",
+    "outputs": "模型或当前计算返回的结果；具体字段看本课上下文与本次观察。",
+    "past_key_values": "存储各层历史 K/V 的 Cache 对象。decode 时会原地增长，并返回拼接后的 K/V。",
+    "position_ids": "当前 token 在完整序列中的位置编号。",
+    "self": "当前这一层 LlamaAttention 对象；其中保存配置、投影参数和训练状态。",
+    "slice": "Python 切片对象。",
+    "slice_indices": "用来选择 logits 时间位置的切片或下标。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "use_cache": "控制模型是否维护生成缓存。",
+    "vocab_size": "词表中可预测 token 的种类数 V。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 47,
+      "end": 47,
+      "replacement": "        __BLANK_1__  # 词表投影",
+      "title": "词表投影",
+      "goal": "只对要求的位置生成 logits。"
+    },
+    {
+      "id": 2,
+      "start": 51,
+      "end": 51,
+      "replacement": "            __BLANK_2__  # 接入训练目标",
+      "title": "接入训练目标",
+      "goal": "将 logits、labels 与词表信息传给损失函数。"
+    }
+  ]
+}

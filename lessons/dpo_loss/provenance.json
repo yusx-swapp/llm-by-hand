@@ -1,0 +1,18 @@
+{
+  "id": "dpo_loss",
+  "title": "DPO：policy / reference 的偏好损失",
+  "version": "1.1.0",
+  "package": "trl",
+  "module": "trl.trainer.dpo_trainer",
+  "symbol": "DPOTrainer._compute_loss",
+  "kind": "method",
+  "origin": "Installed trl wheel; exact source excerpt; no remote fetch",
+  "source_file": "trl/trainer/dpo_trainer.py",
+  "first_line": 1134,
+  "last_line": 1435,
+  "upstream_url": "https://github.com/huggingface/trl/blob/v1.1.0/trl/trainer/dpo_trainer.py#L1134-L1435",
+  "sha256": "605d10adbf1dac853ad107536e1d8102c51733037309933c7b24860ba7ee1263",
+  "module_sha256": "f1cf3ebff436a9ca3c67c2a04196da7a10356262af093a2d075726020869fd9f",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

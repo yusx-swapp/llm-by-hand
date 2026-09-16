@@ -1,0 +1,18 @@
+{
+  "id": "lr_schedule",
+  "title": "学习率：warmup 与 cosine decay",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.optimization",
+  "symbol": "_get_cosine_schedule_with_warmup_lr_lambda",
+  "kind": "function",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/optimization.py",
+  "first_line": 323,
+  "last_line": 331,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/optimization.py#L323-L331",
+  "sha256": "4c6875c560306cc7bd2780a9069dd2ab5f0fcefa1a9d5ae86a952db2ad568922",
+  "module_sha256": "7843431ccb72648c47a9c8cd24532d2d111e8857e48edceb5c6e8122abd9b513",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

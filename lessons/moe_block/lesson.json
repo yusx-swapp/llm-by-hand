@@ -1,0 +1,109 @@
+{
+  "subtitle": "MoE block：路由与专家组成一层",
+  "context": "把路由器和专家执行器连成 Transformer 可用的一个 MoE 子层；训练噪声只在 train 模式下启用。",
+  "outcomes": [
+    "组成 router 与专家集合",
+    "保存输入布局并按 token 展平",
+    "训练时加入路由 jitter",
+    "把 router 输出接到专家执行器"
+  ],
+  "runtime_context": "上游 transformers.models.mixtral.modeling_mixtral 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 014，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 5,
+      "title": "接口与本课位置",
+      "why": "把路由器和专家执行器连成 Transformer 可用的一个 MoE 子层；训练噪声只在 train 模式下启用。"
+    },
+    {
+      "start": 6,
+      "end": 9,
+      "title": "组成 router 与专家集合",
+      "why": "这不是一个 Dense MLP：先得到每 token 的专家选择，再执行稀疏专家。"
+    },
+    {
+      "start": 10,
+      "end": 10,
+      "title": "保存输入布局并按 token 展平",
+      "why": "专家执行器处理 [N,D]，结束时要恢复 [B,T,D]。"
+    },
+    {
+      "start": 11,
+      "end": 13,
+      "title": "训练时加入路由 jitter",
+      "why": "推理时不应随机扰动输入；这与 attention dropout 是不同机制。"
+    },
+    {
+      "start": 14,
+      "end": 16,
+      "title": "把 router 输出接到专家执行器",
+      "why": "同时传递所选编号和连续权重；不要把 router_logits 当作加权系数。"
+    },
+    {
+      "start": 17,
+      "end": 17,
+      "title": "恢复 decoder 需要的布局",
+      "why": "MoE 输出仍应能接入残差流。"
+    }
+  ],
+  "symbols": {
+    "MixtralExperts": "执行被选中专家并聚合结果的模块。",
+    "MixtralSparseMoeBlock": "Mixtral 的稀疏专家子层。",
+    "MixtralTopKRouter": "Mixtral 的路由实现，不把不同模型的 router 返回值接口混用。",
+    "Module": "PyTorch 模块基类，负责子模块、参数、train/eval 状态与梯度相关行为。",
+    "Tensor": "PyTorch 张量类型注解。实际 shape、dtype 和小样本值见当前运行观察。",
+    "_": "显式忽略该返回值，不意味着其他返回值也无用。",
+    "__init__": "构造模型配置和可训练的投影层。它不是每个 token 都重新运行的计算。",
+    "batch_size": "输入 batch size。",
+    "config": "本课模块的配置对象；配置字段的实际值见对应属性的运行观察。",
+    "empty_like": "分配与已有 Tensor 对齐但尚未填入值的存储。",
+    "experts": "本层专家执行器。",
+    "forward": "实际执行一次 attention 计算，处理当前输入并可更新 KV cache。",
+    "gate": "本层 MixtralTopKRouter 模块，不是 MLP 中的中间 gate Tensor。",
+    "hidden_dim": "每个 token 的隐藏宽度 D。",
+    "hidden_states": "当前层收到的 token 表示，常用布局是 [B,T,D]。它不是缓存中的历史 K/V。",
+    "jitter_noise": "训练时输入乘法噪声的幅度。",
+    "nn": "torch.nn 命名空间，提供 Module、Linear 等神经网络组件。",
+    "num_experts_per_tok": "配置中的每 token 专家数。",
+    "reshape": "在保持元素数量的前提下重排形状，必要时可能分配新存储；这里把多个 head 合并。",
+    "router_jitter_noise": "配置中的路由抖动幅度。",
+    "self": "当前这一层 LlamaAttention 对象；其中保存配置、投影参数和训练状态。",
+    "sequence_length": "当前 token 数 T。",
+    "shape": "张量各轴的大小。读取 shape 不会复制数据，也不会改变张量。",
+    "super": "调用父类 nn.Module 的初始化逻辑，让后续子模块和参数正确注册。",
+    "top_k": "每个 token 激活的专家数。",
+    "top_k_index": "每个 token 所选专家的编号。",
+    "top_k_weights": "所选专家对应的权重。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "training": "nn.Module 的运行状态，由 .train() / .eval() 切换，不是一个可训练参数。",
+    "tuple": "二元组/序列的 Python 类型注解；位置表和 forward 返回值都使用二元组。",
+    "uniform_": "按指定范围原地填充均匀随机值。",
+    "view": "在满足布局要求时重新解释张量形状，不改变元素数量。这里用于把最后一维拆成 heads 和 d。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 13,
+      "end": 13,
+      "replacement": "        __BLANK_1__  # 进入专家的布局",
+      "title": "进入专家的布局",
+      "goal": "展平 B 和 T，保留隐藏宽度。"
+    },
+    {
+      "id": 2,
+      "start": 15,
+      "end": 15,
+      "replacement": "        __BLANK_2__  # 连接专家",
+      "title": "连接专家",
+      "goal": "传入正确的 token、专家编号和权重。"
+    },
+    {
+      "id": 3,
+      "start": 17,
+      "end": 17,
+      "replacement": "        __BLANK_3__  # 返回模型布局",
+      "title": "返回模型布局",
+      "goal": "恢复 [B,T,D]。"
+    }
+  ]
+}

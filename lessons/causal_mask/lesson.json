@@ -1,0 +1,116 @@
+{
+  "subtitle": "因果 mask 与历史 token",
+  "context": "从双向 Attention 走向自回归模型：当前 token 不能看未来，但可以访问已有 KV cache；滑动窗口进一步限制历史范围。",
+  "outcomes": [
+    "读取 batch 与本次 query 长度",
+    "先把全部位置设为禁止",
+    "允许当前及更早的位置",
+    "在左侧接上可见的历史缓存"
+  ],
+  "runtime_context": "上游 transformers.modeling_attn_mask_utils 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 003，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 11,
+      "title": "接口与本课位置",
+      "why": "从双向 Attention 走向自回归模型：当前 token 不能看未来，但可以访问已有 KV cache；滑动窗口进一步限制历史范围。"
+    },
+    {
+      "start": 12,
+      "end": 12,
+      "title": "读取 batch 与本次 query 长度",
+      "why": "tgt_len 是当前 token 数，不含缓存；输出 key 轴最终可能更长。"
+    },
+    {
+      "start": 13,
+      "end": 13,
+      "title": "先把全部位置设为禁止",
+      "why": "使用当前 dtype 的有限最小值，与 0 相加的 additive mask 兼容。"
+    },
+    {
+      "start": 14,
+      "end": 18,
+      "title": "允许当前及更早的位置",
+      "why": "通过行列位置比较把下三角（含对角）设为 0。"
+    },
+    {
+      "start": 19,
+      "end": 22,
+      "title": "在左侧接上可见的历史缓存",
+      "why": "这些历史 Key 都早于当前 Query，因此前缀对应列为 0。"
+    },
+    {
+      "start": 23,
+      "end": 32,
+      "title": "屏蔽窗口之外的旧历史",
+      "why": "窗口边界依赖本次长度和过去长度，不能直接裁掉所有历史列。"
+    },
+    {
+      "start": 33,
+      "end": 33,
+      "title": "扩展到可广播的四维 mask",
+      "why": "返回 [B,1,T,S]，单例 head 轴供不同 head 共享。"
+    }
+  ],
+  "symbols": {
+    "Size": "PyTorch 用来描述 Tensor shape 的整数序列类型。",
+    "_make_causal_mask": "从双向 Attention 走向自回归模型：当前 token 不能看未来，但可以访问已有 KV cache；滑动窗口进一步限制历史范围。",
+    "arange": "产生连续整数/位置索引。",
+    "bool": "布尔值或布尔 Tensor 转换。",
+    "bsz": "batch size。",
+    "cat": "沿给定轴拼接多个 Tensor。",
+    "clone": "复制 Tensor 数据并保留可微关系；与 detach 不等价。",
+    "context_mask": "标记需要被屏蔽的窗口外位置。",
+    "device": "Tensor 所在设备，本课程的小输入固定在 CPU。",
+    "diagonal": "窗口下三角屏蔽矩阵的对角线偏移。",
+    "dim": "本次 Tensor 操作选择的轴；-1 表示最后一轴，具体参见本行输入/输出 shape。",
+    "dtype": "Tensor 元素类型；与 shape 是两个独立属性。",
+    "expand": "沿长度为 1 的轴创建广播视图，不分配每份副本。",
+    "finfo": "查询指定浮点 dtype 的数值范围。",
+    "full": "按指定 shape 分配并填充一个值。",
+    "input_ids_shape": "这里只需要输入的 [B,T] 形状，不需要 token 的内容。",
+    "int": "Python 整数类型注解；这里不意味着会自动做类型转换。",
+    "is_torchdynamo_compiling": "检测当前是否处于 TorchDynamo 编译路径。",
+    "mask": "additive attention mask：0 表示允许，大负数表示禁止。",
+    "mask_cond": "位置下标，用于比较 query/key 的前后关系。",
+    "masked_fill_": "按布尔 mask 原地填值。",
+    "min": "取较小值。",
+    "ones_like": "创建与输入对齐的全一 Tensor。",
+    "past_key_values_length": "已有缓存的 token 数，决定额外可见的 Key 列。",
+    "size": "读取指定维度或完整 shape。",
+    "sliding_window": "最多保留的局部历史范围；None 表示不额外限制。",
+    "staticmethod": "静态方法，不隐式接收 self。",
+    "tgt_len": "当前 query token 数 T。",
+    "to": "显式转换 dtype 或 device。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "tril": "取矩阵下三角，偏移量由 diagonal 控制。",
+    "view": "在满足布局要求时重新解释张量形状，不改变元素数量。这里用于把最后一维拆成 heads 和 d。",
+    "zeros": "创建全零 Tensor。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 15,
+      "end": 15,
+      "replacement": "        __BLANK_1__  # 因果可见性",
+      "title": "因果可见性",
+      "goal": "把允许的位置设为 0。"
+    },
+    {
+      "id": 2,
+      "start": 20,
+      "end": 20,
+      "replacement": "            __BLANK_2__  # 拼接缓存列",
+      "title": "拼接缓存列",
+      "goal": "缓存前缀不应被未来 mask 屏蔽。"
+    },
+    {
+      "id": 3,
+      "start": 33,
+      "end": 33,
+      "replacement": "        __BLANK_3__  # 输出布局",
+      "title": "输出布局",
+      "goal": "扩成 [B,1,T,S]。"
+    }
+  ]
+}

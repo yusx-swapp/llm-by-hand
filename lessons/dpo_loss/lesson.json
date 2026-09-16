@@ -1,0 +1,461 @@
+{
+  "subtitle": "DPO：policy / reference 的偏好损失",
+  "context": "在 SFT 之后理解偏好优化：比较 chosen/rejected 相对冻结 reference 的 log probability，再形成可微偏好目标。保留上游完整多损失实现，本期样例集中验证 sigmoid、IPO 混合和 JS/WPO 路径。",
+  "outcomes": [
+    "区分训练与评估指标",
+    "过滤不属于 model.forward 的字段",
+    "对齐下一 token 的预测",
+    "只提取有效 completion 的 token logps"
+  ],
+  "runtime_context": "上游 trl.trainer.dpo_trainer 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 021，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 1,
+      "title": "接口与本课位置",
+      "why": "在 SFT 之后理解偏好优化：比较 chosen/rejected 相对冻结 reference 的 log probability，再形成可微偏好目标。保留上游完整多损失实现，本期样例集中验证 sigmoid、IPO 混合和 JS/WPO 路径。"
+    },
+    {
+      "start": 2,
+      "end": 4,
+      "title": "区分训练与评估指标",
+      "why": "这份源码保留多个目标和平台路径；当前运行观察只展示实际执行的分支。"
+    },
+    {
+      "start": 5,
+      "end": 11,
+      "title": "过滤不属于 model.forward 的字段",
+      "why": "completion_mask 和缓存 reference logps 是训练辅助信息，不能全部传给模型。"
+    },
+    {
+      "start": 12,
+      "end": 14,
+      "title": "对齐下一 token 的预测",
+      "why": "去掉最后一个 logits 时间位置，labels 从第二个 token 开始；mask 必须同样移位。"
+    },
+    {
+      "start": 15,
+      "end": 16,
+      "title": "只提取有效 completion 的 token logps",
+      "why": "先选择真实 token 对应的词表项，再把 prompt/padding 位置置零。"
+    },
+    {
+      "start": 17,
+      "end": 29,
+      "title": "选择普通求和或长短回答尾段加权",
+      "why": "有长度差异时，公共部分与额外尾部分别统计。"
+    },
+    {
+      "start": 30,
+      "end": 31,
+      "title": "拆开 chosen 与 rejected",
+      "why": "batch 排列约定是前半 chosen、后半 rejected。"
+    },
+    {
+      "start": 32,
+      "end": 48,
+      "title": "取得冻结 reference 的分数",
+      "why": "可以缓存，也可以在 no_grad 下运行 reference；PEFT 分支保留但本课不执行。"
+    },
+    {
+      "start": 49,
+      "end": 61,
+      "title": "用相同位置约定计算 reference logps",
+      "why": "policy 与 reference 必须比较同样的 token 与 completion mask。"
+    },
+    {
+      "start": 62,
+      "end": 64,
+      "title": "构造相对 reference 的增量",
+      "why": "偏好学习比较相对改进，而不是只提高所有回答的绝对 logps。"
+    },
+    {
+      "start": 65,
+      "end": 94,
+      "title": "按指定散度构造 chosen/rejected 分数",
+      "why": "反向 KL、正向 KL、JS 和 alpha divergence 的分数变换不同。"
+    },
+    {
+      "start": 95,
+      "end": 98,
+      "title": "形成偏好 margin 并遍历目标",
+      "why": "loss_types 与 loss_weights 必须一一对应。"
+    },
+    {
+      "start": 99,
+      "end": 101,
+      "title": "标准 sigmoid DPO",
+      "why": "-logsigmoid(beta × margin) 是基础目标。"
+    },
+    {
+      "start": 102,
+      "end": 104,
+      "title": "hinge margin 目标",
+      "why": "超过指定 margin 后不再继续惩罚。"
+    },
+    {
+      "start": 105,
+      "end": 117,
+      "title": "IPO 平均分数目标",
+      "why": "先按 completion 长度归一化，再与目标 margin 比较。"
+    },
+    {
+      "start": 118,
+      "end": 130,
+      "title": "EXO 的概率分布比较",
+      "why": "chosen/rejected 的 sigmoid 概率与平滑目标分布进行比较。"
+    },
+    {
+      "start": 131,
+      "end": 131,
+      "title": "NCA 的双方向约束",
+      "why": "chosen 的正方向与 chosen/rejected 的负方向都进入目标。"
+    },
+    {
+      "start": 132,
+      "end": 139,
+      "title": "记录相对 reference 的奖励与 margin",
+      "why": "detach 只用于监控，训练 loss 的梯度没有被提前切断。"
+    },
+    {
+      "start": 140,
+      "end": 144,
+      "title": "robust 对偏好噪声的修正",
+      "why": "正确与翻转方向项按平滑比例组合，不等于普通 sigmoid。"
+    },
+    {
+      "start": 145,
+      "end": 149,
+      "title": "BCO 的两类二元目标",
+      "why": "该版本直接使用 chosen 与 rejected 的奖励项，不依赖 running 基线。"
+    },
+    {
+      "start": 150,
+      "end": 158,
+      "title": "SPPO-hard 的双向 margin 误差",
+      "why": "winner 与 loser 分别围绕正负目标计算平方误差。"
+    },
+    {
+      "start": 159,
+      "end": 169,
+      "title": "对 policy/reference 成对差值排序",
+      "why": "排序对象是两组 logratios，不是每个 token 的词表。"
+    },
+    {
+      "start": 170,
+      "end": 178,
+      "title": "对 chosen/rejected 相对差值排序",
+      "why": "这与上一分支的排序对象不同。"
+    },
+    {
+      "start": 179,
+      "end": 186,
+      "title": "APO-zero 的改进方向",
+      "why": "提高 chosen 概率，抑制 rejected。"
+    },
+    {
+      "start": 187,
+      "end": 194,
+      "title": "APO-down 的抑制方向",
+      "why": "用于当前偏好回答不优于模型默认输出的相应训练假设。"
+    },
+    {
+      "start": 195,
+      "end": 206,
+      "title": "自适应混合两种损失分量",
+      "why": "温度控制 logistic 与 exponential 的混合。"
+    },
+    {
+      "start": 207,
+      "end": 222,
+      "title": "可混入 chosen 的监督项",
+      "why": "有效 chosen token 上的交叉熵被扩展以匹配逐样本 loss 形状。"
+    },
+    {
+      "start": 223,
+      "end": 235,
+      "title": "WPO 的偏好对重加权",
+      "why": "用 no_grad 估计分布权重，再作用于可微的偏好 loss。"
+    },
+    {
+      "start": 236,
+      "end": 239,
+      "title": "按 loss_weight 汇总目标",
+      "why": "逐序列 loss 先归约，再加入总 loss。"
+    },
+    {
+      "start": 240,
+      "end": 245,
+      "title": "记录有效回答位置的熵",
+      "why": "这是监控指标，不是新的训练目标。"
+    },
+    {
+      "start": 246,
+      "end": 251,
+      "title": "累计有效训练 token",
+      "why": "使用 attention_mask 而非包括 padding 的总元素数。"
+    },
+    {
+      "start": 252,
+      "end": 267,
+      "title": "计算 chosen/rejected 的 logits 指标",
+      "why": "先移位再按有效 completion 位置统计，跨设备汇总分子分母。"
+    },
+    {
+      "start": 268,
+      "end": 301,
+      "title": "记录 chosen token 准确率",
+      "why": "只在有效监督位置计数；不能把它当作整个偏好学习质量。"
+    },
+    {
+      "start": 302,
+      "end": 302,
+      "title": "返回可微目标及可选模型输出",
+      "why": "外层训练代码负责 backward 和优化器更新。"
+    }
+  ],
+  "symbols": {
+    "F": "torch.nn.functional：不额外保存参数的神经网络运算。",
+    "ValueError": "输入值不满足接口约定时抛出的异常。",
+    "_": "显式忽略该返回值，不意味着其他返回值也无用。",
+    "_compute_loss": "TRL 的完整偏好目标计算方法；不是一个只返回固定分数的判题函数。",
+    "_metrics": "Trainer 按 train/eval 保存的指标列表。",
+    "_non_model_keys": "偏好训练的辅助字段集合，不应直接传给模型.forward。",
+    "_total_train_tokens": "累计处理的训练 token 数。",
+    "abs": "绝对值。",
+    "accelerator": "实际 Accelerate 实例，用于解包、归约和设备管理。",
+    "accuracy": "监控的 token accuracy，不等同于偏好质量或训练 loss。",
+    "adapter_name": "选择 reference adapter 的名称；没有 adapter 时使用 None。",
+    "agg_chosen_rewards": "跨设备收集的 chosen 监控奖励。",
+    "agg_margins": "跨设备收集的奖励差。",
+    "agg_rejected_rewards": "跨设备收集的 rejected 监控奖励。",
+    "agg_reward_accuracies": "跨设备收集的 chosen 奖励更高的比例指示。",
+    "aligned_logps": "减去归一化项后并应用 completion mask 的 token logps。",
+    "append": "把一个结果加入 Python 列表；不自动进行 Tensor 拼接。",
+    "argmax": "返回最大值所在下标，这里常用于贪心 token 预测。",
+    "args": "DPO 配置对象。",
+    "avg_chosen_logits": "跨设备归约并按有效 token 数平均的 chosen logits 指标。",
+    "avg_rejected_logits": "对应的 rejected 平均 logits 指标。",
+    "batch_loss": "混入 SFT 时，在 chosen 有效位置上计算的交叉熵。",
+    "beta": "偏好 margin / reward 的温度尺度。",
+    "bfloat16": "显式 bfloat16 dtype。",
+    "bool": "布尔值或布尔 Tensor 转换。",
+    "cat": "沿给定轴拼接多个 Tensor。",
+    "chosen_avg_score": "按 chosen completion token 数归一化的分数。",
+    "chosen_labels": "chosen 回答对应的监督 token。",
+    "chosen_lens": "chosen completion 长度。",
+    "chosen_logits": "chosen 的有效回答位置 logits 统计。",
+    "chosen_logps": "policy 对 chosen completion 的序列 log probability。",
+    "chosen_logratios": "policy 相对 reference 在 chosen 上的 log probability 增量。",
+    "chosen_logratios_sorted": "排序后的 chosen 相对 reference logps。",
+    "chosen_mask": "chosen 部分的有效监督 mask。",
+    "chosen_rewards": "beta 缩放后的 chosen 相对改进，detach 后用于监控。",
+    "chosen_scores": "选定散度变换后的 chosen 相对分数。",
+    "chosen_weights": "chosen 回答的权重。",
+    "chunk": "沿一个轴把 Tensor 拆成若干组。",
+    "clamp": "把值限制在给定范围。",
+    "clamp_max": "在本处可表示指数安全上界；Tensor.clamp_max 则执行上界限制。",
+    "clamp_min": "把值限制在给定下界以上。",
+    "clean_loss_term": "robust 目标的正确偏好方向项。",
+    "coef": "alpha divergence 在非极限情形下的比例系数。",
+    "comp_lens": "各 completion 的有效长度。",
+    "comp_pos": "completion mask 的累计位置，用于分辨公共长度与额外尾部。",
+    "completion_lengths": "移位后各 completion 的有效 token 数，至少取 1 避免除零。",
+    "completion_mask": "只让回答 token 进入偏好比较，prompt 仍作为模型输入条件。",
+    "contiguous": "按当前轴顺序整理连续内存布局，不改变逻辑 shape。",
+    "correct_predictions": "预测等于标签且位置有效的布尔结果。",
+    "correct_tokens": "正确预测的有效 token 数。",
+    "cross_entropy": "交叉熵目标；输入是未归一化 logits 和类别 labels。",
+    "cumsum": "沿指定轴的累计和。",
+    "delta": "当前分支定义的成对差值，含义由该目标决定。",
+    "delta_score": "chosen_scores 减 rejected_scores，进入不同偏好 loss。",
+    "detach": "切断当前 Tensor 的自动微分路径；前向数值不变但梯度行为会改变。",
+    "device": "Tensor 所在设备，本课程的小输入固定在 CPU。",
+    "dim": "本次 Tensor 操作选择的轴；-1 表示最后一轴，具体参见本行输入/输出 shape。",
+    "disable_gradient_checkpointing": "reference 推理时暂时禁用梯度 checkpoint，避免 no_grad 下不必要的重算警告。",
+    "discopop_tau": "DiscoPOP 的温度参数。",
+    "dtype": "Tensor 元素类型；与 shape 是两个独立属性。",
+    "entropy": "回答位置的预测分布熵。",
+    "entropy_from_logits": "从词表 logits 计算分布熵的上游函数。",
+    "epsilon": "EXO 使用的偏好平滑概率。",
+    "exp": "指数函数。",
+    "exp_component": "exponential 损失分量。",
+    "expand": "沿长度为 1 的轴创建广播视图，不分配每份副本。",
+    "f_alpha_divergence_coef": "alpha divergence 的系数。",
+    "f_divergence_type": "选定的散度形式，决定构造偏好 margin 的方式。",
+    "flipped_loss_term": "robust 目标的翻转偏好方向项。",
+    "float": "转为 Python 浮点数，或指定浮点类型；Tensor.float 则转换张量 dtype。",
+    "float16": "显式 float16 dtype。",
+    "float32": "显式的 float32 dtype。",
+    "gather": "按下标取 Tensor 的元素；Accelerator.gather 则聚合设备上的值。",
+    "gather_for_metrics": "聚合用于指标的值，本课只有单个 CPU 进程。",
+    "gradient_checkpointing_kwargs": "控制 checkpoint 重算行为的配置。",
+    "input_ids": "token 的整数编号，常用 shape [B,T]；还不是 embedding 向量。",
+    "inputs": "成对排列的 chosen/rejected token、mask 与可选 reference 分数。",
+    "ipo_delta": "IPO 使用的平均 token 分数差。",
+    "is_peft_model": "判断当前模型是否为 PEFT 包装；本课未安装 PEFT，因此不执行该分支。",
+    "item": "从单元素 Tensor 取 Python 标量，常用于记录指标。",
+    "items": "遍历映射中的键和值。",
+    "k": "字典推导中当前字段名，不是 attention Key。",
+    "label_smoothing": "部分偏好目标中的平滑参数。",
+    "ld_alpha": "长短回答额外尾段的权重参数；None 表示普通序列 logps 求和。",
+    "len": "读取序列长度，不是张量所有元素的总数。",
+    "log": "自然对数。",
+    "log1p": "稳定计算 log(1+x)。",
+    "log_denom": "WPO 的 log 归一化分母调整。",
+    "log_pl": "目标 rejected 概率 epsilon 的对数。",
+    "log_pw": "目标 chosen 概率 1-epsilon 的对数。",
+    "log_ql": "EXO 中 rejected 方向概率的稳定对数。",
+    "log_qw": "EXO 中 chosen 方向概率的稳定对数。",
+    "log_ratio_modulation": "DiscoPOP 的混合控制系数。",
+    "logistic_component": "logistic 损失分量。",
+    "logits": "这里是 policy/reference 偏好 margin，不再是 [B,T,V] 的模型词表 logits。",
+    "logps": "汇总后的序列 log probability，接下来拆为 chosen/rejected。",
+    "logratios": "policy 内部 chosen/rejected 差值。",
+    "logratios_sorted": "按 batch 排序的 policy 成对差值。",
+    "logsigmoid": "稳定地计算 log(sigmoid(x))，避免直接先 sigmoid 再 log 的数值问题。",
+    "logsumexp": "稳定计算指数和的对数。",
+    "long": "转换为 int64 类型，常用于位置或类别下标。",
+    "loser_margin_error": "SPPO-hard 中 rejected 偏离目标 margin 的平方误差。",
+    "loss": "组合后再归约的可微目标。",
+    "loss_type": "当前循环计算的目标名称。",
+    "loss_types": "要混合的目标名称列表。",
+    "loss_weight": "当前目标的组合权重。",
+    "loss_weights": "各目标组合时的权重。",
+    "losses_chosen": "APO 分支中作用于 chosen 相对概率的目标项。",
+    "losses_rejected": "APO 分支中作用于 rejected 相对概率的目标项。",
+    "lse1": "logsumexp(logits)，用于 WPO 分布归一化。",
+    "lse2": "logsumexp(2*logits)，用于计算概率平方和相关项。",
+    "margins": "chosen 与 rejected 的监控奖励之差。",
+    "max": "取较大值；这里常用于避免分母为零或限制下界。",
+    "mean": "沿指定轴求均值；不是把所有结构自动展平。",
+    "mean_logps": "按有效 completion 长度平均的调整 logps。",
+    "min": "取较小值。",
+    "minimum": "逐元素取较小值。",
+    "mode": "当前记录训练还是评估指标。",
+    "model": "可训练的 policy 模型。",
+    "model_kwargs": "剔除偏好辅助字段后实际传给 policy/reference 的模型参数。",
+    "no_grad": "在这个上下文内不记录自动微分图；不等同于 model.eval()。",
+    "num_tokens_in_batch": "当前批次 attention_mask 标记的有效 token 数。",
+    "outputs": "模型或当前计算返回的结果；具体字段看本课上下文与本次观察。",
+    "peft_config": "PEFT 模型保存的 adapter 配置映射。",
+    "per_sequence_loss": "某一种目标的逐对/逐序列 loss，还未与其他目标按权重累加。",
+    "per_token_entropy": "每个位置的词表分布熵。",
+    "per_token_logps": "每个实际 token 的 policy log probability，还没有沿 completion 累加。",
+    "precompute_ref_logps": "是否直接使用已缓存的 reference 分数。",
+    "predictions": "chosen 位置的贪心 token 预测，用于监控准确率。",
+    "ql": "EXO 中 rejected 方向的概率。",
+    "qw": "EXO 中 chosen 方向的概率。",
+    "ref_chosen_logps": "冻结 reference 对 chosen 的 log probability。",
+    "ref_logps": "reference 的序列 logps。",
+    "ref_logratios": "reference 内部 chosen/rejected 差值。",
+    "ref_logratios_sorted": "按 batch 排序的 reference 成对差值。",
+    "ref_model": "不被本次优化更新的 reference 模型。",
+    "ref_outputs": "reference 模型的前向结果。",
+    "ref_per_token_logps": "reference 对每个实际回答 token 的 log probability。",
+    "ref_rejected_logps": "冻结 reference 对 rejected 的 log probability。",
+    "ref_shared_logps": "reference 在公共范围内的 logps。",
+    "ref_shift_logits": "reference 与下一 token 标签对齐的 logits。",
+    "ref_tail_logps": "reference 在额外尾部的 logps。",
+    "rejected_avg_score": "按 rejected completion token 数归一化的分数。",
+    "rejected_lens": "rejected completion 长度。",
+    "rejected_logits": "rejected 的有效回答位置 logits 统计。",
+    "rejected_logps": "policy 对 rejected completion 的序列 log probability。",
+    "rejected_logratios": "policy 相对 reference 在 rejected 上的 log probability 增量。",
+    "rejected_logratios_sorted": "排序后的 rejected 相对 reference logps。",
+    "rejected_mask": "rejected 部分的有效监督 mask。",
+    "rejected_rewards": "rejected 相对改进的监控奖励。",
+    "rejected_scores": "选定散度变换后的 rejected 相对分数。",
+    "rejected_weights": "rejected 回答的权重。",
+    "relu": "把负值截为 0。",
+    "return_outputs": "是否同时返回模型前向输出。",
+    "reward_accuracies": "chosen 监控奖励大于 rejected 的指示值；不是生成质量的充分评估。",
+    "selective_log_softmax": "只取给定 token id 的 log-softmax 项，不把整个词表当作监督类别列表返回。",
+    "self": "当前这一层 LlamaAttention 对象；其中保存配置、投影参数和训练状态。",
+    "shared_lens": "一对回答共享比较的最短长度。",
+    "shared_logps": "公共范围内的 token log probability 之和。",
+    "shared_mask": "公共比较范围内的 token 指示。",
+    "shift_completion_mask": "与移位标签相同位置的 completion mask。",
+    "shift_labels": "从第二个 token 开始的监督编号，与前一个位置的 logits 对齐。",
+    "shift_logits": "去掉最后一个时间位置的词表 logits，与后面的 token label 对齐。",
+    "sigmoid": "logistic 函数，将实数映射到 (0,1)。",
+    "size": "读取指定维度或完整 shape。",
+    "sort": "返回排序后的值及它们在原 Tensor 中的下标。",
+    "strict": "zip 的长度一致性检查开关。",
+    "sum": "沿指定轴求和；是否保留轴取决于 keepdim。",
+    "t_chosen": "chosen 的缩放指数输入。",
+    "t_chosen_float": "转 float32 并限制上界后的 chosen 指数输入。",
+    "t_rejected": "rejected 的缩放指数输入。",
+    "t_rejected_float": "转 float32 并限制上界后的 rejected 指数输入。",
+    "tail_logps": "额外尾部的 log probability 之和。",
+    "tail_mask": "超出公共长度的尾部 token 指示。",
+    "tensor": "从数据构造 Tensor，可指定 dtype/device。",
+    "to": "显式转换 dtype 或 device。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "total_chosen_logits": "chosen 有效监督位置的 logits 统计总和。",
+    "total_chosen_tokens": "chosen 有效监督 token 数。",
+    "total_rejected_logits": "rejected 有效监督位置的 logits 统计总和。",
+    "total_rejected_tokens": "rejected 有效监督 token 数。",
+    "total_sum": "跨设备归约后的有效 token 总数。",
+    "total_tokens": "准确率分母使用的有效 token 数。",
+    "training": "nn.Module 的运行状态，由 .train() / .eval() 切换，不是一个可训练参数。",
+    "unsqueeze": "插入一个长度为 1 的轴，常用于广播。",
+    "unwrap_model": "从加速器包装中取得底层模型。",
+    "use_adapter": "在相应 adapter 上下文中运行 policy/reference；本课没有安装或假装实现 LoRA。",
+    "use_weighting": "是否启用 WPO 的偏好对重加权。",
+    "v": "字典推导中当前字段值，不是 attention Value。",
+    "weights": "从 mean_logps 得到的回答权重，再拆为 chosen/rejected。",
+    "winner_margin_error": "SPPO-hard 中 chosen 偏离目标 margin 的平方误差。",
+    "zip": "把多个序列按位置配对。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 13,
+      "end": 13,
+      "replacement": "        __BLANK_1__  # 对齐 token 监督",
+      "title": "对齐 token 监督",
+      "goal": "与移位后的 logits 保持相同位置。"
+    },
+    {
+      "id": 2,
+      "start": 16,
+      "end": 16,
+      "replacement": "        __BLANK_2__  # 屏蔽条件文本",
+      "title": "屏蔽条件文本",
+      "goal": "prompt 不应被当作 completion 目标。"
+    },
+    {
+      "id": 3,
+      "start": 62,
+      "end": 62,
+      "replacement": "        __BLANK_3__  # chosen 相对改进",
+      "title": "chosen 相对改进",
+      "goal": "相对同一个 reference 计算分数。"
+    },
+    {
+      "id": 4,
+      "start": 63,
+      "end": 63,
+      "replacement": "        __BLANK_4__  # rejected 相对改进",
+      "title": "rejected 相对改进",
+      "goal": "保持两种回答的 reference 约定一致。"
+    },
+    {
+      "id": 5,
+      "start": 100,
+      "end": 100,
+      "replacement": "                __BLANK_5__  # sigmoid DPO",
+      "title": "sigmoid DPO",
+      "goal": "构造可微的偏好 margin 目标。"
+    },
+    {
+      "id": 6,
+      "start": 236,
+      "end": 236,
+      "replacement": "            __BLANK_6__  # 组合目标",
+      "title": "组合目标",
+      "goal": "按配置权重汇总逐对损失。"
+    }
+  ]
+}

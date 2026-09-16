@@ -1,0 +1,132 @@
+{
+  "subtitle": "Multi-head Attention：投影、分头与合头",
+  "context": "在数学核心外补齐可训练投影、分头和输出投影，得到标准 Multi-head Self-Attention。训练/推理最终使用的就是这种模块接口。",
+  "outcomes": [
+    "保留输入的 batch/token 轴",
+    "分别投影 Q/K/V 并分头",
+    "选择实际计算后端",
+    "接入刚学习的 attention 数学路径"
+  ],
+  "runtime_context": "上游 transformers.models.distilbert.modeling_distilbert 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 002，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 6,
+      "title": "接口与本课位置",
+      "why": "在数学核心外补齐可训练投影、分头和输出投影，得到标准 Multi-head Self-Attention。训练/推理最终使用的就是这种模块接口。"
+    },
+    {
+      "start": 7,
+      "end": 10,
+      "title": "保留输入的 batch/token 轴",
+      "why": "输入 hidden_states 是 [B,T,D]；稍后合头必须恢复同样的 token 顺序。"
+    },
+    {
+      "start": 11,
+      "end": 14,
+      "title": "分别投影 Q/K/V 并分头",
+      "why": "三个独立投影产生不同角色；先 view 成 [B,T,H,d]，再 transpose 成 [B,H,T,d]。"
+    },
+    {
+      "start": 15,
+      "end": 18,
+      "title": "选择实际计算后端",
+      "why": "本课使用 eager；上游分发仍保留，并不是另写一个简化 Attention 冒充原文。"
+    },
+    {
+      "start": 19,
+      "end": 28,
+      "title": "接入刚学习的 attention 数学路径",
+      "why": "把 Q/K/V、mask、缩放与训练时 dropout 传下去。"
+    },
+    {
+      "start": 29,
+      "end": 31,
+      "title": "合头并做输出投影",
+      "why": "合并 H 与 d，再投影到输入 D，才能接入 Transformer 残差流。"
+    }
+  ],
+  "symbols": {
+    "ALL_ATTENTION_FUNCTIONS": "Transformers 的 attention 后端注册表；不是训练模型的参数或缓存。",
+    "Callable": "可调用对象的类型注解；这里描述选中的 attention 后端函数。",
+    "FloatTensor": "浮点 Tensor 的类型注解；运行 dtype 仍取决于实际输入。",
+    "Tensor": "PyTorch 张量类型注解。实际 shape、dtype 和小样本值见当前运行观察。",
+    "TransformersKwargs": "Transformers 对额外调用参数的类型描述，不是运行时的张量数据。",
+    "Unpack": "类型系统中展开 TypedDict 结构的标记，不会执行张量展开操作。",
+    "_attn_implementation": "配置选择的 attention 后端名称。本课固定为 eager，以便观察真实权重和数据流。",
+    "attention_head_size": "每个 Query/Key/Value head 的通道宽度。",
+    "attention_interface": "配置选择的 attention 可调用函数。本课绑定 eager_attention_forward。",
+    "attention_mask": "加到 attention logits 上的可广播 mask；[B,1,T,S] 中 S 是可见的 K/V 总长度。",
+    "attn_output": "各 token 的 attention 结果。后端先返回 [B,T,H,d]，随后合头并投影回 [B,T,D]。",
+    "attn_weights": "本课 eager 路径的 attention 权重，shape 为 [B,H,T,S]；S 包括可见的历史缓存长度。",
+    "config": "本课模块的配置对象；配置字段的实际值见对应属性的运行观察。",
+    "contiguous": "按当前轴顺序整理连续内存布局，不改变逻辑 shape。",
+    "dropout": "本次运算使用的 dropout 概率，训练和推理可能不同。",
+    "eager_attention_forward": "普通 PyTorch attention 路径：对齐 KV 头、QK 缩放点积、mask、softmax、dropout、加权 V。",
+    "forward": "实际执行一次 attention 计算，处理当前输入并可更新 KV cache。",
+    "get_interface": "从后端注册表中根据配置取实现，并接受 eager 作为对应的默认实现。",
+    "hidden_shape": "投影后分头所用的 [B,T,-1,d] 模板，-1 会随 Q 与 K/V 的宽度分别推断。",
+    "hidden_states": "当前层收到的 token 表示，常用布局是 [B,T,D]。它不是缓存中的历史 K/V。",
+    "input_shape": "去掉 hidden_size 后保存的输入前缀形状，即 [B,T]；用于最终合头。",
+    "k_lin": "标准 MHA 的 Key 投影。",
+    "key_layer": "K 投影分头后的 [B,H,T,d]。",
+    "kwargs": "继续转交给下层计算的额外具名参数。",
+    "out_lin": "合头之后的输出投影。",
+    "p": "nn.Dropout 保存的概率，不是模型参数。",
+    "q_lin": "标准 MHA 的 Query 投影。",
+    "query_layer": "Q 投影分头后的 [B,H,T,d]。",
+    "reshape": "在保持元素数量的前提下重排形状，必要时可能分配新存储；这里把多个 head 合并。",
+    "scaling": "attention 点积的缩放因子；改变 softmax 前 logits 的幅值。",
+    "self": "当前这一层 LlamaAttention 对象；其中保存配置、投影参数和训练状态。",
+    "shape": "张量各轴的大小。读取 shape 不会复制数据，也不会改变张量。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "training": "nn.Module 的运行状态，由 .train() / .eval() 切换，不是一个可训练参数。",
+    "transpose": "交换两个轴的位置，通常不复制底层数据。本课把 [B,T,heads,d] 换成 [B,heads,T,d]。",
+    "tuple": "二元组/序列的 Python 类型注解；位置表和 forward 返回值都使用二元组。",
+    "v_lin": "标准 MHA 的 Value 投影。",
+    "value_layer": "V 投影分头后的 [B,H,T,d]。",
+    "view": "在满足布局要求时重新解释张量形状，不改变元素数量。这里用于把最后一维拆成 heads 和 d。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 8,
+      "end": 8,
+      "replacement": "        __BLANK_1__  # 分头模板",
+      "title": "分头模板",
+      "goal": "根据当前输入与每头宽度准备 view 模板。"
+    },
+    {
+      "id": 2,
+      "start": 11,
+      "end": 11,
+      "replacement": "        __BLANK_2__  # 构造 Query",
+      "title": "构造 Query",
+      "goal": "完成 Q 投影、分头与换轴。"
+    },
+    {
+      "id": 3,
+      "start": 12,
+      "end": 12,
+      "replacement": "        __BLANK_3__  # 构造 Key",
+      "title": "构造 Key",
+      "goal": "K 必须采用同样的 token/head 布局。"
+    },
+    {
+      "id": 4,
+      "start": 13,
+      "end": 13,
+      "replacement": "        __BLANK_4__  # 构造 Value",
+      "title": "构造 Value",
+      "goal": "得到后端加权的 V。"
+    },
+    {
+      "id": 5,
+      "start": 29,
+      "end": 29,
+      "replacement": "        __BLANK_5__  # 合头",
+      "title": "合头",
+      "goal": "保持 batch/token 次序合并 head。"
+    }
+  ]
+}

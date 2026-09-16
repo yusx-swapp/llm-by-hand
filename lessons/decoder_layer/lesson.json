@@ -1,0 +1,121 @@
+{
+  "subtitle": "Decoder layer：残差、norm、attention、MLP",
+  "context": "组装完整 decoder 层：保留残差，先 norm 后 attention，再保留残差、norm 和 MLP。上一组模块开始形成可训练整体。",
+  "outcomes": [
+    "创建本层 Attention 与 MLP",
+    "为两条残差分支建立独立 norm",
+    "保留 attention 分支的残差",
+    "让 Attention 接收位置、mask 与 cache"
+  ],
+  "runtime_context": "上游 transformers.models.llama.modeling_llama 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 008，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 5,
+      "title": "接口与本课位置",
+      "why": "组装完整 decoder 层：保留残差，先 norm 后 attention，再保留残差、norm 和 MLP。上一组模块开始形成可训练整体。"
+    },
+    {
+      "start": 6,
+      "end": 8,
+      "title": "创建本层 Attention 与 MLP",
+      "why": "两条子路径都要回到相同 hidden_size。"
+    },
+    {
+      "start": 9,
+      "end": 22,
+      "title": "为两条残差分支建立独立 norm",
+      "why": "不能把 attention 前的 norm 与 MLP 前的 norm 共享成同一参数对象。"
+    },
+    {
+      "start": 23,
+      "end": 25,
+      "title": "保留 attention 分支的残差",
+      "why": "分支应使用归一化输入，残差则保留归一化之前的原始表示。"
+    },
+    {
+      "start": 26,
+      "end": 35,
+      "title": "让 Attention 接收位置、mask 与 cache",
+      "why": "保持上层传入的 cache 与位置语义；这里丢弃权重但使用 attention 输出。"
+    },
+    {
+      "start": 36,
+      "end": 39,
+      "title": "完成第一条残差连接",
+      "why": "相加的两个 Tensor 必须保持同样 batch/token/hidden 布局。"
+    },
+    {
+      "start": 40,
+      "end": 43,
+      "title": "执行 norm → MLP → 第二条残差",
+      "why": "这是 Attention 之后的另一条可训练分支。"
+    }
+  ],
+  "symbols": {
+    "Cache": "Transformers 的缓存接口。本课 decode 观察使用 DynamicCache。",
+    "GradientCheckpointingLayer": "Transformers 的梯度检查点层基类；模型可在需要时重算前向以节省激活内存。",
+    "LlamaAttention": "Llama decoder 的 attention 子模块，不包含前后的 norm、MLP、残差或 LM head。",
+    "LlamaConfig": "Transformers 中的 Llama 配置类，决定 hidden_size、头数、每头维度、bias 等。",
+    "LlamaDecoderLayer": "包含 attention、MLP、两次 norm 与残差连接的 decoder 层。",
+    "LlamaMLP": "Llama 的门控前馈子模块。",
+    "LlamaRMSNorm": "Llama 的均方根归一化模块。",
+    "LongTensor": "整数张量类型，用于序列位置索引；本课实际 cache_position 为 int64。",
+    "Tensor": "PyTorch 张量类型注解。实际 shape、dtype 和小样本值见当前运行观察。",
+    "TransformersKwargs": "Transformers 对额外调用参数的类型描述，不是运行时的张量数据。",
+    "Unpack": "类型系统中展开 TypedDict 结构的标记，不会执行张量展开操作。",
+    "_": "此处明确丢弃 attention 权重，不表示 attention 输出也无用。",
+    "__init__": "构造模型配置和可训练的投影层。它不是每个 token 都重新运行的计算。",
+    "attention_mask": "加到 attention logits 上的可广播 mask；[B,1,T,S] 中 S 是可见的 K/V 总长度。",
+    "bool": "布尔值或布尔 Tensor 转换。",
+    "cache_position": "本次 token 在完整序列中的位置索引；不是本批次内部从零开始的下标。",
+    "config": "本课模块的配置对象；配置字段的实际值见对应属性的运行观察。",
+    "eps": "归一化分母的稳定项 epsilon。",
+    "forward": "实际执行一次 attention 计算，处理当前输入并可更新 KV cache。",
+    "hidden_size": "decoder 隐藏表示的宽度 D，也就是进入和离开 attention 子层的最后一维。",
+    "hidden_states": "当前层收到的 token 表示，常用布局是 [B,T,D]。它不是缓存中的历史 K/V。",
+    "input_layernorm": "Attention 前的归一化层。",
+    "int": "Python 整数类型注解；这里不意味着会自动做类型转换。",
+    "kwargs": "继续转交给下层计算的额外具名参数。",
+    "layer_idx": "当前 decoder 层的下标，供 KV cache 定位该层的数据。本课单层模型使用 0。",
+    "mlp": "本层门控前馈模块。",
+    "past_key_values": "存储各层历史 K/V 的 Cache 对象。decode 时会原地增长，并返回拼接后的 K/V。",
+    "position_embeddings": "由上层 rotary embedding 计算出的 (cos,sin)，不是加到 hidden_states 上的普通位置向量。",
+    "position_ids": "每个 token 在序列中的位置索引。",
+    "post_attention_layernorm": "MLP 前的归一化层。",
+    "residual": "进入当前分支之前保存的原始表示。",
+    "rms_norm_eps": "配置中 RMSNorm 的稳定项。",
+    "self": "当前这一层 LlamaAttention 对象；其中保存配置、投影参数和训练状态。",
+    "self_attn": "本层的 LlamaAttention 实例。",
+    "super": "调用父类 nn.Module 的初始化逻辑，让后续子模块和参数正确注册。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "tuple": "二元组/序列的 Python 类型注解；位置表和 forward 返回值都使用二元组。",
+    "use_cache": "是否让上层模型使用缓存的接口参数。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 24,
+      "end": 24,
+      "replacement": "        __BLANK_1__  # Attention 前归一化",
+      "title": "Attention 前归一化",
+      "goal": "保持残差与分支输入分开。"
+    },
+    {
+      "id": 2,
+      "start": 36,
+      "end": 36,
+      "replacement": "        __BLANK_2__  # 残差连接",
+      "title": "残差连接",
+      "goal": "回加分支之前的原始表示。"
+    },
+    {
+      "id": 3,
+      "start": 41,
+      "end": 41,
+      "replacement": "        __BLANK_3__  # 前馈分支",
+      "title": "前馈分支",
+      "goal": "对归一化后的表示运行 MLP。"
+    }
+  ]
+}

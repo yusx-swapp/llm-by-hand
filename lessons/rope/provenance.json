@@ -1,0 +1,18 @@
+{
+  "id": "rope",
+  "title": "RoPE：把位置编码到 Q / K",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.models.llama.modeling_llama",
+  "symbol": "apply_rotary_pos_emb",
+  "kind": "function",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/models/llama/modeling_llama.py",
+  "first_line": 144,
+  "last_line": 167,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/models/llama/modeling_llama.py#L144-L167",
+  "sha256": "e2975ea7060de67704dfef2f64c821064e66fc292923e37f1d2689077e846b94",
+  "module_sha256": "87dfc080e7c12b49cdd70bd0c47cc725701fcc54dd8542f301bb0a6c7e8b1e16",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

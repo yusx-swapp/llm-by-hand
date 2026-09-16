@@ -1,0 +1,28 @@
+# Private local state and experiment outputs
+data/
+*-runs/
+*.sqlite
+*.sqlite3*
+*.db
+*.db-*
+*.pt
+*.pth
+*.safetensors
+*.ckpt
+
+# Environments, credentials, caches, local reports
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+reference-check.json
+observation-build.json
+project-result.json
+.DS_Store

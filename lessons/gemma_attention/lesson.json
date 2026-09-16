@@ -1,0 +1,122 @@
+{
+  "subtitle": "Gemma：attention logits softcap",
+  "context": "比较 Gemma 的 attention logits softcap：softmax 之前做有界变换，mask 必须在正确的位置施加。",
+  "outcomes": [
+    "确定缩放与 KV 分组",
+    "先计算并缩放 QK logits",
+    "对 logits 做 softcap",
+    "softcap 后再加 mask"
+  ],
+  "runtime_context": "上游 transformers.models.gemma2.modeling_gemma2 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 011，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 11,
+      "title": "接口与本课位置",
+      "why": "比较 Gemma 的 attention logits softcap：softmax 之前做有界变换，mask 必须在正确的位置施加。"
+    },
+    {
+      "start": 12,
+      "end": 17,
+      "title": "确定缩放与 KV 分组",
+      "why": "默认缩放由每头宽度确定，K/V 需要先对齐 Query 头。"
+    },
+    {
+      "start": 18,
+      "end": 19,
+      "title": "先计算并缩放 QK logits",
+      "why": "此时还没有归一化为概率。"
+    },
+    {
+      "start": 20,
+      "end": 23,
+      "title": "对 logits 做 softcap",
+      "why": "先除以 cap，tanh，再乘回 cap，保持可解释的有界范围。"
+    },
+    {
+      "start": 24,
+      "end": 28,
+      "title": "softcap 后再加 mask",
+      "why": "若先加大负 mask 再 tanh，会把禁止位置变成有限值，破坏屏蔽。"
+    },
+    {
+      "start": 29,
+      "end": 33,
+      "title": "归一化并汇总 Value",
+      "why": "后续 dropout、加权 V 与布局恢复延续基本 attention。"
+    }
+  ],
+  "symbols": {
+    "Module": "PyTorch 模块基类，负责子模块、参数、train/eval 状态与梯度相关行为。",
+    "Tensor": "PyTorch 张量类型注解。实际 shape、dtype 和小样本值见当前运行观察。",
+    "attention_mask": "加到 attention logits 上的可广播 mask；[B,1,T,S] 中 S 是可见的 K/V 总长度。",
+    "attn_output": "各 token 的 attention 结果。后端先返回 [B,T,H,d]，随后合头并投影回 [B,T,D]。",
+    "attn_weights": "本课 eager 路径的 attention 权重，shape 为 [B,H,T,S]；S 包括可见的历史缓存长度。",
+    "causal_mask": "按实际 K 长度截取并加入 logits 的 additive mask。",
+    "contiguous": "按当前轴顺序整理连续内存布局，不改变逻辑 shape。",
+    "dim": "本次 Tensor 操作选择的轴；-1 表示最后一轴，具体参见本行输入/输出 shape。",
+    "dropout": "本次运算使用的 dropout 概率，训练和推理可能不同。",
+    "dtype": "Tensor 元素类型；与 shape 是两个独立属性。",
+    "eager_attention_forward": "普通 PyTorch attention 路径：对齐 KV 头、QK 缩放点积、mask、softmax、dropout、加权 V。",
+    "float": "转为 Python 浮点数，或指定浮点类型；Tensor.float 则转换张量 dtype。",
+    "float32": "显式 float32 dtype。",
+    "functional": "torch.nn.functional 命名空间。",
+    "head_dim": "每一个 attention head 的特征宽度 d。与整个 hidden_size D 不是同一个量。",
+    "key": "共享 KV 头的原始 Key，后续通过 repeat_kv 对齐查询头。",
+    "key_states": "复制 KV 头之后、与 Query 头数对齐的 K。",
+    "kwargs": "继续转交给下层计算的额外具名参数。",
+    "matmul": "矩阵乘法；最后两个轴参与乘法，前导 batch/head 轴可广播。",
+    "module": "本次 attention 所属模块，提供 head_dim、训练状态等配置；不是输入 Tensor。",
+    "nn": "torch.nn 命名空间，提供 Module、Linear 等神经网络组件。",
+    "num_key_value_groups": "每个 KV head 对应的 Query head 数。后端据此对齐 K/V 与 Q。",
+    "p": "dropout 的实际概率参数。",
+    "query": "分头后的 Query。",
+    "repeat_kv": "将共享 KV 头扩展到 Query head 对应的组数。",
+    "scaling": "attention 点积的缩放因子；改变 softmax 前 logits 的幅值。",
+    "shape": "张量各轴的大小。读取 shape 不会复制数据，也不会改变张量。",
+    "softcap": "logits 的软上界参数；None 表示不做 softcap。",
+    "softmax": "在指定轴上把 logits 变成归一化概率。",
+    "tanh": "双曲正切，将值限制在 (-1,1)。",
+    "to": "显式转换 dtype 或 device。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "training": "nn.Module 的运行状态，由 .train() / .eval() 切换，不是一个可训练参数。",
+    "transpose": "交换两个轴的位置，通常不复制底层数据。本课把 [B,T,heads,d] 换成 [B,heads,T,d]。",
+    "tuple": "二元组/序列的 Python 类型注解；位置表和 forward 返回值都使用二元组。",
+    "value": "共享 KV 头的原始 Value。",
+    "value_states": "复制 KV 头之后用于加权的 V。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 21,
+      "end": 21,
+      "replacement": "        __BLANK_1__  # 缩放进 tanh",
+      "title": "缩放进 tanh",
+      "goal": "先把 logits 变换到 softcap 的单位。"
+    },
+    {
+      "id": 2,
+      "start": 22,
+      "end": 22,
+      "replacement": "        __BLANK_2__  # 有界变换",
+      "title": "有界变换",
+      "goal": "不要直接裁剪，也不要先对 mask 做 softcap。"
+    },
+    {
+      "id": 3,
+      "start": 23,
+      "end": 23,
+      "replacement": "        __BLANK_3__  # 恢复单位",
+      "title": "恢复单位",
+      "goal": "变回目标 cap 范围。"
+    },
+    {
+      "id": 4,
+      "start": 29,
+      "end": 29,
+      "replacement": "    __BLANK_4__  # 按 key 归一化",
+      "title": "按 key 归一化",
+      "goal": "保持 dtype 和归一化轴正确。"
+    }
+  ]
+}

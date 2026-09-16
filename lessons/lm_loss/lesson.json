@@ -1,0 +1,93 @@
+{
+  "subtitle": "Causal-LM loss：shift 与 ignore_index",
+  "context": "从模型前向转到训练：第 t 个位置的 logits 预测下一个 token；padding 和 prompt 屏蔽位置不应进入损失。",
+  "outcomes": [
+    "先使用 float32 计算损失",
+    "将监督目标向下一个 token 对齐",
+    "把所有 token 汇入交叉熵接口",
+    "使用有效 token 计数归一化"
+  ],
+  "runtime_context": "上游 transformers.loss.loss_utils 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 016，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 10,
+      "title": "接口与本课位置",
+      "why": "从模型前向转到训练：第 t 个位置的 logits 预测下一个 token；padding 和 prompt 屏蔽位置不应进入损失。"
+    },
+    {
+      "start": 11,
+      "end": 12,
+      "title": "先使用 float32 计算损失",
+      "why": "大词表归一化可能放大低精度数值问题。"
+    },
+    {
+      "start": 13,
+      "end": 18,
+      "title": "将监督目标向下一个 token 对齐",
+      "why": "先在尾部补 ignore_index，再取从位置 1 开始的 labels；避免循环绕回。"
+    },
+    {
+      "start": 19,
+      "end": 21,
+      "title": "把所有 token 汇入交叉熵接口",
+      "why": "最后一维仍是 vocab_size；labels 展成相同数量的 token。"
+    },
+    {
+      "start": 22,
+      "end": 23,
+      "title": "使用有效 token 计数归一化",
+      "why": "num_items_in_batch 可用于跨梯度累积保持一致的归一化尺度。"
+    }
+  ],
+  "symbols": {
+    "ForCausalLMLoss": "Transformers 的下一 token 语言建模损失函数。",
+    "Tensor": "PyTorch 张量类型注解。实际 shape、dtype 和小样本值见当前运行观察。",
+    "contiguous": "按当前轴顺序整理连续内存布局，不改变逻辑 shape。",
+    "device": "Tensor 所在设备，本课程的小输入固定在 CPU。",
+    "fixed_cross_entropy": "上游封装的交叉熵及有效 token 归一化。",
+    "float": "转为 Python 浮点数，或指定浮点类型；Tensor.float 则转换张量 dtype。",
+    "functional": "torch.nn.functional 命名空间。",
+    "ignore_index": "不参与交叉熵的标签值，默认 -100。",
+    "int": "Python 整数类型注解；这里不意味着会自动做类型转换。",
+    "kwargs": "继续转交给下层计算的额外具名参数。",
+    "labels": "监督目标的 token 编号；-100 位置会被损失忽略。",
+    "logits": "[B,T,V] 的未归一化词表得分。",
+    "loss": "返回的可微标量目标。",
+    "nn": "torch.nn 命名空间，提供 Module、Linear 等神经网络组件。",
+    "num_items_in_batch": "指定损失归一化使用的有效项数；None 使用默认方式。",
+    "pad": "在指定轴两端填充；labels 常用 ignore_index 而不是正常 token id。",
+    "shift_labels": "已经与当前 logits 对齐的下一 token 标签。",
+    "to": "显式转换 dtype 或 device。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "value": "这里是 labels padding 的填充值，使用 ignore_index，而非有效 token。",
+    "view": "在满足布局要求时重新解释张量形状，不改变元素数量。这里用于把最后一维拆成 heads 和 d。",
+    "vocab_size": "词表类别数 V。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 16,
+      "end": 16,
+      "replacement": "        __BLANK_1__  # 下一 token 对齐",
+      "title": "下一 token 对齐",
+      "goal": "不要把当前 token 自身当预测目标。"
+    },
+    {
+      "id": 2,
+      "start": 19,
+      "end": 19,
+      "replacement": "    __BLANK_2__  # 词表维度",
+      "title": "词表维度",
+      "goal": "展平 batch/token，但保留 V。"
+    },
+    {
+      "id": 3,
+      "start": 22,
+      "end": 22,
+      "replacement": "    __BLANK_3__  # 归一化损失",
+      "title": "归一化损失",
+      "goal": "传递有效项数和 ignore_index。"
+    }
+  ]
+}

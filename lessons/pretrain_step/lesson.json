@@ -1,0 +1,166 @@
+{
+  "subtitle": "训练步：loss、梯度累积与 backward",
+  "context": "把数据、模型和 loss 连到真正训练步：准备输入、计算目标、按梯度累积缩放并 backward。optimizer.step 在外层训练循环执行。",
+  "outcomes": [
+    "切换模型与可选优化器的训练状态",
+    "把输入放到训练设备并处理包装",
+    "保留上游特定平台路径",
+    "在训练精度上下文内计算 loss"
+  ],
+  "runtime_context": "上游 transformers.trainer 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 019，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 29,
+      "title": "接口与本课位置",
+      "why": "把数据、模型和 loss 连到真正训练步：准备输入、计算目标、按梯度累积缩放并 backward。optimizer.step 在外层训练循环执行。"
+    },
+    {
+      "start": 30,
+      "end": 33,
+      "title": "切换模型与可选优化器的训练状态",
+      "why": "train/eval 影响 dropout 等；它本身不执行梯度更新。"
+    },
+    {
+      "start": 34,
+      "end": 34,
+      "title": "把输入放到训练设备并处理包装",
+      "why": "输入来自前面的 collator；本课固定 CPU 单进程。"
+    },
+    {
+      "start": 35,
+      "end": 38,
+      "title": "保留上游特定平台路径",
+      "why": "源码没有删掉这些分支，但本地 CPU 示例不会走模型并行平台。"
+    },
+    {
+      "start": 39,
+      "end": 42,
+      "title": "在训练精度上下文内计算 loss",
+      "why": "这一步连接模型 forward 与 causal-LM loss，而非只验证一个孤立函数。"
+    },
+    {
+      "start": 43,
+      "end": 51,
+      "title": "按需清理设备缓存",
+      "why": "由 torch_empty_cache_steps 与 global_step 决定；不是损失或参数清零。"
+    },
+    {
+      "start": 52,
+      "end": 54,
+      "title": "准备特定优化器所需的额外参数",
+      "why": "不能把所有优化器都假设成相同接口。"
+    },
+    {
+      "start": 55,
+      "end": 58,
+      "title": "处理多 GPU 的 loss 归约",
+      "why": "本课程的 CPU fixture 不会执行这里，但保持源码位置与说明。"
+    },
+    {
+      "start": 59,
+      "end": 67,
+      "title": "按照当前训练约定归一化 loss",
+      "why": "当损失本身没有处理有效项数时，按当前梯度累积步数缩放。"
+    },
+    {
+      "start": 68,
+      "end": 69,
+      "title": "实际计算训练梯度",
+      "why": "外层循环稍后才进行 optimizer.step；本方法返回 detached loss 用于记录。"
+    },
+    {
+      "start": 70,
+      "end": 70,
+      "title": "返回用于记录的 detached loss",
+      "why": "训练梯度已在上面 backward 计算；与在计算目标前 detach 不同。"
+    }
+  ],
+  "symbols": {
+    "ADALOMO": "自适应 LOMO 优化器类型。",
+    "Any": "允许多种 Python 类型的类型注解，不执行张量转换。",
+    "DEEPSPEED": "DeepSpeed 分布式后端类型。",
+    "DistributedType": "Accelerate 的分布式类型枚举。",
+    "LOMO": "需要特殊 backward 参数的优化器类型。",
+    "Module": "PyTorch 模块基类，负责子模块、参数、train/eval 状态与梯度相关行为。",
+    "OptimizerNames": "Transformers 支持的优化器名称枚举。",
+    "Tensor": "PyTorch 张量类型注解。实际 shape、dtype 和小样本值见当前运行观察。",
+    "_get_learning_rate": "从 Trainer 读取当前优化器学习率。",
+    "_prepare_context_parallel_inputs": "准备上下文并行专用输入与上下文；本课 CPU 单进程不做分片。",
+    "_prepare_inputs": "Trainer 将输入转到目标设备并做包装的真实方法。",
+    "accelerator": "Accelerate 实例，统一设备和 backward/归约接口。",
+    "args": "Trainer 的 TrainingArguments。",
+    "backward": "计算梯度，不执行 optimizer 的参数更新。",
+    "callable": "检查对象能否像函数一样被调用。",
+    "clear_device_cache": "上游统一的设备缓存清理函数，不清除模型权重。",
+    "compute_loss": "Trainer 调用模型并取得训练目标的入口。",
+    "compute_loss_context_manager": "Trainer 使用的计算精度/自动混合精度上下文。",
+    "compute_loss_func": "用户可提供的自定义 loss 回调。",
+    "cp_context": "上下文并行的运行上下文；当前单进程场景是无操作上下文。",
+    "current_gradient_accumulation_steps": "当前这组微批次实际使用的累积步数。",
+    "detach": "切断当前 Tensor 的自动微分路径；前向数值不变但梯度行为会改变。",
+    "device": "Tensor 所在设备，本课程的小输入固定在 CPU。",
+    "dict": "Python 映射类型；键决定数据字段，值可能是 Tensor。",
+    "distributed_type": "当前分布式运行类型。",
+    "global_step": "已经完成的 optimizer 更新计数，不是当前微批次序号。",
+    "gradient_accumulation_steps": "几个微批次累计后才做一次 optimizer 更新。",
+    "hasattr": "检查对象是否具有某属性。",
+    "inputs": "已经由 collator 产生的 input_ids、labels 等输入映射。",
+    "is_sagemaker_mp_enabled": "检查是否处于 SageMaker 模型并行环境。",
+    "kwargs": "继续转交给下层计算的额外具名参数。",
+    "loss": "本次微批次的训练目标；返回日志值前已执行 backward。",
+    "loss_mb": "该平台返回的微批次损失包装对象。",
+    "mean": "沿指定轴求均值；不是把所有结构自动展平。",
+    "model": "本课真实的小型 LlamaForCausalLM，用来计算 logits 和 loss。",
+    "model_accepts_loss_kwargs": "模型损失是否接受额外的归一化参数。",
+    "n_gpu": "训练配置检测到的 GPU 数量。",
+    "nn": "torch.nn 命名空间，提供 Module、Linear 等神经网络组件。",
+    "num_items_in_batch": "用于损失归一化的有效 token 数。",
+    "optim": "TrainingArguments 中的优化器选择。",
+    "optimizer": "外层训练循环使用的优化器；该方法可能还没有创建它。",
+    "reduce_mean": "平台相关的损失归约。",
+    "self": "当前这一层 LlamaAttention 对象；其中保存配置、投影参数和训练状态。",
+    "smp_forward_backward": "SageMaker 专用前向/反向实现。",
+    "state": "Trainer 当前训练状态。",
+    "str": "字符串类型；不是 Tensor。",
+    "to": "显式转换 dtype 或 device。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "torch_empty_cache_steps": "可选的设备缓存清理间隔。",
+    "train": "将模块切换到训练状态；不等同于更新参数。",
+    "training_step": "Trainer 中一次训练微批次的前向与反向；不等于完整 optimizer step 循环。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 34,
+      "end": 34,
+      "replacement": "            __BLANK_1__  # 准备输入",
+      "title": "准备输入",
+      "goal": "使用真实 Trainer 的输入准备路径。"
+    },
+    {
+      "id": 2,
+      "start": 40,
+      "end": 40,
+      "replacement": "                __BLANK_2__  # 前向训练目标",
+      "title": "前向训练目标",
+      "goal": "把输入与有效项数交给 loss。"
+    },
+    {
+      "id": 3,
+      "start": 61,
+      "end": 61,
+      "replacement": "                __BLANK_3__  # 梯度累积缩放",
+      "title": "梯度累积缩放",
+      "goal": "不要把每个微批次都当成完整 batch。"
+    },
+    {
+      "id": 4,
+      "start": 68,
+      "end": 68,
+      "replacement": "            __BLANK_4__  # 反向传播",
+      "title": "反向传播",
+      "goal": "在正确的加速器接口中计算梯度。"
+    }
+  ]
+}

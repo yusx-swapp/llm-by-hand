@@ -1,0 +1,18 @@
+{
+  "id": "gemma_attention",
+  "title": "Gemma：attention logits softcap",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.models.gemma2.modeling_gemma2",
+  "symbol": "eager_attention_forward",
+  "kind": "function",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/models/gemma2/modeling_gemma2.py",
+  "first_line": 194,
+  "last_line": 226,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/models/gemma2/modeling_gemma2.py#L194-L226",
+  "sha256": "c0de8bbf765fd001709fb7536b222407da1a66c5ccf05ab8dc6f97beb3b432f0",
+  "module_sha256": "51778cfc7b0a4861b9d4b74f2e84fc840100c9fef3fae159ded9bd3c73316d6a",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

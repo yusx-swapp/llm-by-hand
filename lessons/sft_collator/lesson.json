@@ -1,0 +1,131 @@
+{
+  "subtitle": "SFT：只对 completion / assistant 训练",
+  "context": "从 Pretrain 转到 SFT：prompt 提供条件，但通常只对 completion/assistant token 计算训练目标。数据 mask 决定训练语义。",
+  "outcomes": [
+    "读取各条样本的 token 与 labels",
+    "选择普通 padding 还是拼接路径",
+    "读取 completion 与 assistant 监督范围",
+    "保持所有字段在截断后仍对齐"
+  ],
+  "runtime_context": "上游 trl.trainer.sft_trainer 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 020，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 1,
+      "title": "接口与本课位置",
+      "why": "从 Pretrain 转到 SFT：prompt 提供条件，但通常只对 completion/assistant token 计算训练目标。数据 mask 决定训练语义。"
+    },
+    {
+      "start": 2,
+      "end": 6,
+      "title": "读取各条样本的 token 与 labels",
+      "why": "labels 可以由样本显式提供，也可以从 input_ids复制；不是所有输入位置都要计算损失。"
+    },
+    {
+      "start": 7,
+      "end": 14,
+      "title": "把非 completion 标签改成 -100",
+      "why": "这是 SFT 与对所有文本继续预训练的关键差异。"
+    },
+    {
+      "start": 15,
+      "end": 40,
+      "title": "保持所有字段在截断后仍对齐",
+      "why": "截断 input_ids 时，labels、position 和监督 mask 都必须一致截断。"
+    },
+    {
+      "start": 41,
+      "end": 49,
+      "title": "在拼接时仍保留每条序列的边界",
+      "why": "拼接不等于让后一条样本预测前一条样本的开头。"
+    },
+    {
+      "start": 50,
+      "end": 73,
+      "title": "构建一致的模型输入批次",
+      "why": "input_ids 用 pad_token_id，labels 用 -100，mask/position 用各自的填充值。"
+    },
+    {
+      "start": 74,
+      "end": 89,
+      "title": "屏蔽拼接序列的首位置标签",
+      "why": "边界位置不能从上一条序列的 token 进行预测。"
+    }
+  ],
+  "symbols": {
+    "Any": "允许多种 Python 类型的类型注解，不执行张量转换。",
+    "ValueError": "输入值不满足接口约定时抛出的异常。",
+    "arange": "产生连续整数/位置索引。",
+    "assistant_masks": "标记哪些 token 属于 assistant 回复，和角色模板有关。",
+    "attention_mask": "普通 padding 模式下的有效 token 标记。",
+    "batch_seq_lengths": "批内各 packed 样本的原始序列长度列表。",
+    "cat": "沿给定轴拼接多个 Tensor。",
+    "completion_mask": "标记哪些 token 属于 completion。",
+    "completion_only_loss": "只训练 completion 部分的开关。",
+    "dict": "Python 映射类型；键决定数据字段，值可能是 Tensor。",
+    "dim": "本次 Tensor 操作选择的轴；-1 表示最后一轴，具体参见本行输入/输出 shape。",
+    "example": "列表中正在处理的单条样本；观察以实际执行到的实例为准。",
+    "examples": "带 token、completion/assistant mask 的 SFT 样本列表。",
+    "get": "从映射读取字段并可提供默认值。",
+    "get_position_ids_from_packed_seq_lengths": "上游根据打包序列长度恢复位置下标的方法。",
+    "ids": "列表推导中当前样本的 token 编号。",
+    "input_ids": "token 的整数编号，常用 shape [B,T]；还不是 embedding 向量。",
+    "labels": "监督目标的 token 编号；-100 位置会被损失忽略。",
+    "lbl": "列表推导中当前样本的 labels。",
+    "len": "读取序列长度，不是张量所有元素的总数。",
+    "list": "Python 列表类型；不是自动堆叠好的 Tensor。",
+    "m": "列表推导中当前样本的监督或 attention mask。",
+    "max_length": "本 collator 的最大长度限制。",
+    "ones_like": "创建与输入对齐的全一 Tensor。",
+    "output": "最终返回的 SFT 模型输入映射。",
+    "pad": "在指定轴两端填充；labels 常用 ignore_index 而不是正常 token id。",
+    "pad_to_multiple_of": "按指定倍数对齐长度。",
+    "pad_token_id": "input_ids 的 padding token 编号。",
+    "padding_free": "是否将样本拼接到一条序列并使用 position_ids 标识边界。",
+    "padding_side": "padding 放在左侧还是右侧的策略，所有字段必须保持一致。",
+    "padding_value": "当前字段使用的填充值。",
+    "position_ids": "每条原始序列内部的位置，拼接后仍须在边界重置。",
+    "self": "当前这一层 LlamaAttention 对象；其中保存配置、投影参数和训练状态。",
+    "sl": "当前样本的序列长度，用来产生 position_ids。",
+    "slice": "选择序列位置的切片对象。",
+    "str": "字符串类型；不是 Tensor。",
+    "tensor": "从数据构造 Tensor，可指定 dtype/device。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "torch_call": "从 Pretrain 转到 SFT：prompt 提供条件，但通常只对 completion/assistant token 计算训练目标。数据 mask 决定训练语义。",
+    "truncation_mode": "从开头还是结尾保留内容的截断策略。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 67,
+      "end": 69,
+      "replacement": "        __BLANK_1__  # 生成监督批次",
+      "title": "生成监督批次",
+      "goal": "labels 不能用普通 pad token 作为有效监督。"
+    },
+    {
+      "id": 2,
+      "start": 74,
+      "end": 74,
+      "replacement": "            __BLANK_2__  # 处理序列边界",
+      "title": "处理序列边界",
+      "goal": "拼接训练不能跨样本预测开头。"
+    },
+    {
+      "id": 3,
+      "start": 83,
+      "end": 83,
+      "replacement": "            __BLANK_3__  # 只训练 completion",
+      "title": "只训练 completion",
+      "goal": "保留输入条件，但屏蔽其 loss。"
+    },
+    {
+      "id": 4,
+      "start": 88,
+      "end": 88,
+      "replacement": "            __BLANK_4__  # 只训练 assistant",
+      "title": "只训练 assistant",
+      "goal": "叠加角色监督范围。"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "causal_lm",
+  "title": "LM head：从隐藏表示到 token logits",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.models.llama.modeling_llama",
+  "symbol": "LlamaForCausalLM.forward",
+  "kind": "method",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/models/llama/modeling_llama.py",
+  "first_line": 454,
+  "last_line": 512,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/models/llama/modeling_llama.py#L454-L512",
+  "sha256": "b92c46ac7a56fce53ab0c38cc809fdd4eaa5fb8fc92bd72f82667d7d022ac0e4",
+  "module_sha256": "87dfc080e7c12b49cdd70bd0c47cc725701fcc54dd8542f301bb0a6c7e8b1e16",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

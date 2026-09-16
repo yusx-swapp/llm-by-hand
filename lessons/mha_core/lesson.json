@@ -1,0 +1,119 @@
+{
+  "subtitle": "Multi-head Attention：QKᵀ、softmax 与 V",
+  "context": "先理解 Attention 的实际数学路径：QKᵀ → 缩放 → mask → softmax → 对 V 加权。输入已经分好 head；下一课亲手完成投影与分头。",
+  "outcomes": [
+    "计算 token 间的相关性",
+    "根据每头宽度缩放 logits",
+    "把可见性约束加到 logits",
+    "在 key/token 轴上归一化"
+  ],
+  "runtime_context": "上游 transformers.models.distilbert.modeling_distilbert 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 001，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 10,
+      "title": "接口与本课位置",
+      "why": "先理解 Attention 的实际数学路径：QKᵀ → 缩放 → mask → softmax → 对 V 加权。输入已经分好 head；下一课亲手完成投影与分头。"
+    },
+    {
+      "start": 11,
+      "end": 14,
+      "title": "根据每头宽度缩放 logits",
+      "why": "维度越宽，点积幅度越容易变大。未显式传 scaling 时使用每头宽度的倒数平方根。"
+    },
+    {
+      "start": 15,
+      "end": 16,
+      "title": "计算 token 间的相关性",
+      "why": "Q 的最后轴 d 与 K 的 d 相乘，得到 [B,H,T,S]；转置的是 K 的最后两个轴。"
+    },
+    {
+      "start": 17,
+      "end": 20,
+      "title": "把可见性约束加到 logits",
+      "why": "这是 additive mask：允许位置为 0，禁止位置为大的负数；不能当作乘法的 0/1 mask。"
+    },
+    {
+      "start": 21,
+      "end": 21,
+      "title": "在 key/token 轴上归一化",
+      "why": "每个 Query 在所有可见 Key 之间分配概率。这个 DistilBERT 实现没有显式转换 softmax dtype；后续可与 Llama/Gemma 的精度策略比较。"
+    },
+    {
+      "start": 22,
+      "end": 23,
+      "title": "只在需要时对权重做 dropout",
+      "why": "训练状态来自 module.training；概率已经由调用者给出。"
+    },
+    {
+      "start": 24,
+      "end": 27,
+      "title": "按注意力权重汇总 V",
+      "why": "[B,H,T,S] 乘 [B,H,S,d] 得到 [B,H,T,d]，随后换成 [B,T,H,d] 供合头。"
+    }
+  ],
+  "symbols": {
+    "Module": "PyTorch 模块基类，负责子模块、参数、train/eval 状态与梯度相关行为。",
+    "Tensor": "PyTorch 张量类型注解。实际 shape、dtype 和小样本值见当前运行观察。",
+    "TransformersKwargs": "Transformers 对额外调用参数的类型描述，不是运行时的张量数据。",
+    "Unpack": "类型系统中展开 TypedDict 结构的标记，不会执行张量展开操作。",
+    "attention_mask": "加到 attention logits 上的可广播 mask；[B,1,T,S] 中 S 是可见的 K/V 总长度。",
+    "attn_output": "各 token 的 attention 结果。后端先返回 [B,T,H,d]，随后合头并投影回 [B,T,D]。",
+    "attn_weights": "本函数先用这个名字存 logits，再存归一化/丢弃后的注意力权重；位置不同含义不同。",
+    "contiguous": "按当前轴顺序整理连续内存布局，不改变逻辑 shape。",
+    "dim": "本次 Tensor 操作选择的轴；-1 表示最后一轴，具体参见本行输入/输出 shape。",
+    "dropout": "本次运算使用的 dropout 概率，训练和推理可能不同。",
+    "eager_attention_forward": "普通 PyTorch attention 路径：对齐 KV 头、QK 缩放点积、mask、softmax、dropout、加权 V。",
+    "float": "转为 Python 浮点数，或指定浮点类型；Tensor.float 则转换张量 dtype。",
+    "functional": "torch.nn.functional 命名空间。",
+    "key": "已分头的 Key：[B,H,S,d]；S 不必等于 Query 的 T。",
+    "kwargs": "继续转交给下层计算的额外具名参数。",
+    "matmul": "矩阵乘法；最后两个轴参与乘法，前导 batch/head 轴可广播。",
+    "module": "本次 attention 所属模块，提供 head_dim、训练状态等配置；不是输入 Tensor。",
+    "nn": "torch.nn 命名空间，提供 Module、Linear 等神经网络组件。",
+    "p": "dropout 的实际概率参数。",
+    "query": "已分头的 Query：[B,H,T,d]，每个当前 token 用它寻找相关的 Key。",
+    "scaling": "attention 点积的缩放因子；改变 softmax 前 logits 的幅值。",
+    "shape": "张量各轴的大小。读取 shape 不会复制数据，也不会改变张量。",
+    "size": "读取指定维度或完整 shape。",
+    "softmax": "在指定轴上把 logits 变成归一化概率。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "training": "nn.Module 的运行状态，由 .train() / .eval() 切换，不是一个可训练参数。",
+    "transpose": "交换两个轴的位置，通常不复制底层数据。本课把 [B,T,heads,d] 换成 [B,heads,T,d]。",
+    "value": "要被加权汇总的 Value：[B,H,S,d]。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 15,
+      "end": 15,
+      "replacement": "    __BLANK_1__  # 相关性矩阵",
+      "title": "相关性矩阵",
+      "goal": "完成 Q 与 K 的正确矩阵乘法。"
+    },
+    {
+      "id": 2,
+      "start": 21,
+      "end": 21,
+      "replacement": "    __BLANK_2__  # 概率归一化",
+      "title": "概率归一化",
+      "goal": "选择正确轴和数值精度。"
+    },
+    {
+      "id": 3,
+      "start": 24,
+      "end": 24,
+      "replacement": "    __BLANK_3__  # 加权 Value",
+      "title": "加权 Value",
+      "goal": "完成权重与 V 的乘法。"
+    },
+    {
+      "id": 4,
+      "start": 25,
+      "end": 25,
+      "replacement": "    __BLANK_4__  # 恢复 token 布局",
+      "title": "恢复 token 布局",
+      "goal": "把 head 和 token 轴放到后续层需要的位置。"
+    }
+  ]
+}

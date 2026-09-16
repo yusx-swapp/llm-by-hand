@@ -1,0 +1,105 @@
+{
+  "subtitle": "RMSNorm：归一化与数值精度",
+  "context": "理解 Llama 的归一化与低精度训练稳定性：不是减均值的 LayerNorm，而是按最后一维的均方根缩放。",
+  "outcomes": [
+    "建立逐通道缩放参数",
+    "保存 dtype 并用 float32 计算统计量",
+    "沿特征轴计算均方",
+    "做均方根归一化"
+  ],
+  "runtime_context": "上游 transformers.models.llama.modeling_llama 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 004，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 7,
+      "title": "接口与本课位置",
+      "why": "理解 Llama 的归一化与低精度训练稳定性：不是减均值的 LayerNorm，而是按最后一维的均方根缩放。"
+    },
+    {
+      "start": 8,
+      "end": 11,
+      "title": "建立逐通道缩放参数",
+      "why": "weight 的长度是 hidden_size；它参与优化器更新。"
+    },
+    {
+      "start": 12,
+      "end": 13,
+      "title": "保存 dtype 并用 float32 计算统计量",
+      "why": "半精度输入也需要更稳定的均方计算；最后再转换回来。"
+    },
+    {
+      "start": 14,
+      "end": 14,
+      "title": "沿特征轴计算均方",
+      "why": "这里没有减去均值；keepdim=True 保留可广播的最后一轴。"
+    },
+    {
+      "start": 15,
+      "end": 15,
+      "title": "做均方根归一化",
+      "why": "epsilon 防止分母为零，rsqrt 直接给出平方根倒数。"
+    },
+    {
+      "start": 16,
+      "end": 19,
+      "title": "缩放并恢复输入精度",
+      "why": "参数乘法与转换顺序也影响数值行为。"
+    }
+  ],
+  "symbols": {
+    "LlamaRMSNorm": "Llama 使用的 RMSNorm 模块。",
+    "Module": "PyTorch 模块基类，负责子模块、参数、train/eval 状态与梯度相关行为。",
+    "Parameter": "需要被 nn.Module 注册和训练的 Tensor。",
+    "__init__": "构造模型配置和可训练的投影层。它不是每个 token 都重新运行的计算。",
+    "dtype": "Tensor 元素类型；与 shape 是两个独立属性。",
+    "eps": "分母中的稳定项 epsilon。",
+    "extra_repr": "PyTorch 模块打印时附加的描述，不参与数值计算。",
+    "float32": "显式 float32 dtype。",
+    "forward": "实际执行一次 attention 计算，处理当前输入并可更新 KV cache。",
+    "hidden_size": "decoder 隐藏表示的宽度 D，也就是进入和离开 attention 子层的最后一维。",
+    "hidden_states": "当前层收到的 token 表示，常用布局是 [B,T,D]。它不是缓存中的历史 K/V。",
+    "input_dtype": "原始输入 Tensor 的 dtype。",
+    "keepdim": "归约时是否保留被归约的单例轴。",
+    "mean": "沿指定轴求均值；不是把所有结构自动展平。",
+    "nn": "torch.nn 命名空间，提供 Module、Linear 等神经网络组件。",
+    "ones": "创建全一 Tensor。",
+    "pow": "逐元素幂运算。",
+    "rsqrt": "逐元素计算平方根的倒数。",
+    "self": "当前这一层 LlamaAttention 对象；其中保存配置、投影参数和训练状态。",
+    "shape": "张量各轴的大小。读取 shape 不会复制数据，也不会改变张量。",
+    "super": "调用父类 nn.Module 的初始化逻辑，让后续子模块和参数正确注册。",
+    "to": "显式转换 dtype 或 device。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "tuple": "二元组/序列的 Python 类型注解；位置表和 forward 返回值都使用二元组。",
+    "use_kernel_forward_from_hub": "上游可选 kernel 集成点；本课使用本地 PyTorch 路径，不下载 kernel。",
+    "variance": "沿特征轴的均方 E[x²]，不是中心化方差。",
+    "variance_epsilon": "模块保存的 epsilon。",
+    "weight": "当前层的可训练权重；具体 shape 由所处层和配置决定。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 14,
+      "end": 14,
+      "replacement": "        __BLANK_1__  # 均方统计",
+      "title": "均方统计",
+      "goal": "选择正确轴并保留广播维度。"
+    },
+    {
+      "id": 2,
+      "start": 15,
+      "end": 15,
+      "replacement": "        __BLANK_2__  # 归一化",
+      "title": "归一化",
+      "goal": "结合 epsilon 与均方根。"
+    },
+    {
+      "id": 3,
+      "start": 16,
+      "end": 16,
+      "replacement": "        __BLANK_3__  # 输出缩放",
+      "title": "输出缩放",
+      "goal": "返回符合 dtype/参数关系的输出。"
+    }
+  ]
+}

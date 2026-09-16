@@ -1,0 +1,127 @@
+{
+  "subtitle": "稀疏专家：分发 token 并加权聚合",
+  "context": "执行稀疏分发与聚合：不同专家只接收分配给它的 token，结果按路由权重累加回原位置。",
+  "outcomes": [
+    "建立与输入对齐的聚合缓冲区",
+    "根据专家编号建立分发索引",
+    "只遍历被实际选中的专家",
+    "找出这个专家对应的 token 及 Top-K 槽位"
+  ],
+  "runtime_context": "上游 transformers.models.mixtral.modeling_mixtral 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 013，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 6,
+      "title": "接口与本课位置",
+      "why": "执行稀疏分发与聚合：不同专家只接收分配给它的 token，结果按路由权重累加回原位置。"
+    },
+    {
+      "start": 7,
+      "end": 7,
+      "title": "建立与输入对齐的聚合缓冲区",
+      "why": "输出要保留每个 token 的位置，不能按专家分组返回。"
+    },
+    {
+      "start": 8,
+      "end": 12,
+      "title": "根据专家编号建立分发索引",
+      "why": "离散路由索引不需要梯度，但专家计算与路由权重仍然需要。"
+    },
+    {
+      "start": 13,
+      "end": 16,
+      "title": "只遍历被实际选中的专家",
+      "why": "同一 token 可以出现在多个专家中；当前浮窗显示最后一次实际执行的循环观察。"
+    },
+    {
+      "start": 17,
+      "end": 17,
+      "title": "找出这个专家对应的 token 及 Top-K 槽位",
+      "why": "token_idx 用来取输入和写回输出，top_k_pos 用来取相应路由权重。"
+    },
+    {
+      "start": 18,
+      "end": 21,
+      "title": "执行该专家的门控 MLP",
+      "why": "参数以专家轴集中存储，当前 expert_idx 选择该专家的一组投影。"
+    },
+    {
+      "start": 22,
+      "end": 22,
+      "title": "乘以该 token 的路由权重",
+      "why": "每个专家输出的贡献不同，不能简单平均。"
+    },
+    {
+      "start": 23,
+      "end": 25,
+      "title": "加回 token 的原始位置",
+      "why": "使用累加而不是覆盖，才能合并一个 token 的多个专家贡献。"
+    }
+  ],
+  "symbols": {
+    "Tensor": "PyTorch 张量类型注解。实际 shape、dtype 和小样本值见当前运行观察。",
+    "act_fn": "专家 MLP 的激活函数。",
+    "chunk": "沿一个轴把 Tensor 拆成若干组。",
+    "current_hidden_states": "当前专家的中间/输出表示，会先经过激活门控、降维，再乘路由权重。",
+    "current_state": "当前专家收到的 token 表示。",
+    "dim": "本次 Tensor 操作选择的轴；-1 表示最后一轴，具体参见本行输入/输出 shape。",
+    "down_proj": "按专家编号存储的降维参数。",
+    "dtype": "Tensor 元素类型；与 shape 是两个独立属性。",
+    "expert_hit": "本批次实际有 token 的专家编号。",
+    "expert_idx": "当前循环正在执行的专家编号，不是 token 编号。",
+    "expert_mask": "专家、Top-K 槽位和 token 之间的 one-hot 分发关系。",
+    "final_hidden_states": "按原 token 顺序累积专家输出的缓冲区。",
+    "forward": "实际执行一次 attention 计算，处理当前输入并可更新 KV cache。",
+    "functional": "torch.nn.functional 命名空间。",
+    "gate": "拆出的门控分支。",
+    "gate_up_proj": "按专家存储的 gate/up 投影参数。",
+    "greater": "逐元素大于比较，产生布尔指示。",
+    "hidden_states": "当前层收到的 token 表示，常用布局是 [B,T,D]。它不是缓存中的历史 K/V。",
+    "index_add_": "按下标将若干向量累加到输出，重复下标会累加而不是覆盖。",
+    "linear": "使用给定参数执行线性投影，不新建可训练层。",
+    "nn": "torch.nn 命名空间，提供 Module、Linear 等神经网络组件。",
+    "no_grad": "在这个上下文内不记录自动微分图；不等同于 model.eval()。",
+    "nonzero": "返回非零/为真的位置下标。",
+    "num_classes": "one-hot 的类别轴大小，这里对应专家总数。",
+    "num_experts": "总专家数 E。",
+    "one_hot": "把类别下标转换为 one-hot 指示 Tensor。",
+    "permute": "按指定顺序重新排列所有轴，通常改变 stride 而不复制底层数据。",
+    "self": "当前这一层 LlamaAttention 对象；其中保存配置、投影参数和训练状态。",
+    "sum": "沿指定轴求和；是否保留轴取决于 keepdim。",
+    "to": "显式转换 dtype 或 device。",
+    "token_idx": "分配给当前专家的原始 token 下标。",
+    "top_k_index": "[N,K] 的专家整数编号。",
+    "top_k_pos": "当前 token 的专家位于其 Top-K 选择中的哪个槽位。",
+    "top_k_weights": "[N,K] 的可微路由权重。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "up": "拆出的内容分支。",
+    "where": "取满足条件的位置，或在两个 Tensor 中按条件选择。",
+    "zeros_like": "创建与输入 shape/dtype/device 对齐的零 Tensor。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 17,
+      "end": 17,
+      "replacement": "            __BLANK_1__  # 分发索引",
+      "title": "分发索引",
+      "goal": "区分 token 下标和 Top-K 槽位。"
+    },
+    {
+      "id": 2,
+      "start": 22,
+      "end": 22,
+      "replacement": "            __BLANK_2__  # 路由加权",
+      "title": "路由加权",
+      "goal": "选取每个 token 对应该专家的权重。"
+    },
+    {
+      "id": 3,
+      "start": 23,
+      "end": 23,
+      "replacement": "            __BLANK_3__  # 累加回原位置",
+      "title": "累加回原位置",
+      "goal": "不能覆盖来自其他专家的贡献。"
+    }
+  ]
+}

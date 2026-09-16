@@ -1,0 +1,16 @@
+LLM by Hand
+Copyright 2026 LLM by Hand contributors
+
+This application is distributed under the Apache License, Version 2.0.
+
+It includes source excerpts from Hugging Face Transformers 5.1.0 and TRL 1.1.0.
+Each lesson retains its own provenance.json, LICENSE and NOTICE files identifying
+the original source, version, line range and copyright notices. Reference code
+is kept separate from project-owned execution and teaching adapters.
+
+Monaco Editor 0.56.0 is vendored under web/vendor/monaco. Its original LICENSE
+and ThirdPartyNotices.txt are retained. Those notices and terms continue to
+apply to the bundled editor and its third-party components.
+
+Dependencies installed through requirements.txt are distributed separately
+under their respective licenses.

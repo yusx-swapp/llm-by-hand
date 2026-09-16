@@ -1,0 +1,14 @@
+{
+  "id": "llama_attention",
+  "title": "LlamaAttention",
+  "version": "5.1.0",
+  "origin": "Installed transformers wheel; no remote fetch or source edits",
+  "source_file": "src/transformers/models/llama/modeling_llama.py",
+  "first_line": 224,
+  "last_line": 292,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/models/llama/modeling_llama.py#L224-L292",
+  "sha256": "eafca77ed23d6fc6422a9ce482121b6358e7a48b695fbac5ccb58ff9e530e683",
+  "module_sha256": "87dfc080e7c12b49cdd70bd0c47cc725701fcc54dd8542f301bb0a6c7e8b1e16",
+  "license": "Apache-2.0",
+  "adaptations": "None in reference.py. Imports and small CPU fixtures are supplied separately by the lesson harness."
+}

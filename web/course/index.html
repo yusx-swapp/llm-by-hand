@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6f8">
+  <title>LLM by Hand · LLM 全流程源码课</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/course/style.css">
+  <script src="/static/vendor/monaco/vs/loader.js"></script>
+  <script type="module" src="/static/course/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#lesson-content">跳到学习区</a>
+  <header class="app-header">
+    <a class="brand" href="#/001/follow"><span class="brand-symbol">lh.</span><span>LLM by Hand<small>LLM 源码实作</small></span></a>
+    <button class="text-button" id="course-menu">课程目录</button>
+    <div class="course-breadcrumb" id="course-breadcrumb">从 MHA 到训练与生成</div>
+    <div class="header-actions"><span class="local-indicator"><i></i> 本地课堂</span><button id="about-lesson" class="text-button">课程位置与范围</button></div>
+  </header>
+  <div class="course-layout"><aside id="course-map" class="course-sidebar" aria-label="顺序课程目录"></aside><main id="lesson-content" tabindex="-1"><div class="loading"><span class="spinner"></span> 正在打开源码课…</div></main></div>
+  <button id="course-overlay" class="course-overlay" aria-label="关闭课程目录" hidden></button>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <dialog id="app-dialog" aria-labelledby="dialog-title">
+    <form method="dialog">
+      <button class="dialog-close icon-button" value="cancel" aria-label="关闭浮窗">×</button>
+      <div id="dialog-icon" class="dialog-icon"></div>
+      <h2 id="dialog-title"></h2><div id="dialog-body" class="dialog-body"></div>
+      <div class="dialog-actions"><button class="button secondary" value="cancel" id="dialog-cancel">取消</button><button class="button primary" value="confirm" id="dialog-confirm">继续</button></div>
+    </form>
+  </dialog>
+  <noscript><p>本课程的跟敲编辑器和悬停解释需要 JavaScript。所有脚本均来自本地服务器。</p></noscript>
+</body>
+</html>

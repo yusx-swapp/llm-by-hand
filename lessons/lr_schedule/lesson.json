@@ -1,0 +1,77 @@
+{
+  "subtitle": "学习率：warmup 与 cosine decay",
+  "context": "训练不仅是 backward：学习率需要按训练进度变化。这里返回的是乘在基础学习率上的倍率，而不是学习率本身。",
+  "outcomes": [
+    "先执行 warmup",
+    "计算 warmup 后的相对进度",
+    "按 cosine 周期衰减",
+    "应用最低学习率比例"
+  ],
+  "runtime_context": "上游 transformers.optimization 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 018，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 3,
+      "title": "接口与本课位置",
+      "why": "训练不仅是 backward：学习率需要按训练进度变化。这里返回的是乘在基础学习率上的倍率，而不是学习率本身。"
+    },
+    {
+      "start": 4,
+      "end": 5,
+      "title": "先执行 warmup",
+      "why": "用 max(1, warmup_steps) 避免除零；warmup 段先从小倍率开始。"
+    },
+    {
+      "start": 6,
+      "end": 6,
+      "title": "计算 warmup 后的相对进度",
+      "why": "分母只包含余下训练步数，而不是再次包含 warmup。"
+    },
+    {
+      "start": 7,
+      "end": 7,
+      "title": "按 cosine 周期衰减",
+      "why": "num_cycles 控制周期数；常用半周期从高到低。"
+    },
+    {
+      "start": 8,
+      "end": 9,
+      "title": "应用最低学习率比例",
+      "why": "min_lr_rate 是相对基础 lr 的下界。"
+    }
+  ],
+  "symbols": {
+    "_get_cosine_schedule_with_warmup_lr_lambda": "上游用于 LambdaLR 的余弦倍率函数。",
+    "cos": "RoPE 或余弦调度中的余弦值；具体角色由本行说明确定。",
+    "current_step": "当前优化器调度步数，不一定等于已经处理的微批次数。",
+    "factor": "最终乘到 optimizer 基础学习率上的倍率。",
+    "float": "转为 Python 浮点数，或指定浮点类型；Tensor.float 则转换张量 dtype。",
+    "int": "Python 整数类型注解；这里不意味着会自动做类型转换。",
+    "math": "Python 标量数学函数模块，不是 Tensor。",
+    "max": "取较大值；这里常用于避免分母为零或限制下界。",
+    "min_lr_rate": "相对基础学习率的最低倍率。",
+    "num_cycles": "warmup 后执行多少个 cosine 周期。",
+    "num_training_steps": "包含 warmup 的总调度步数。",
+    "num_warmup_steps": "warmup 阶段的步数。",
+    "pi": "圆周率常量，用于余弦周期。",
+    "progress": "warmup 后已完成的相对比例。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 5,
+      "end": 5,
+      "replacement": "        __BLANK_1__  # warmup 倍率",
+      "title": "warmup 倍率",
+      "goal": "正确处理 0 warmup 边界。"
+    },
+    {
+      "id": 2,
+      "start": 7,
+      "end": 7,
+      "replacement": "    __BLANK_2__  # 余弦倍率",
+      "title": "余弦倍率",
+      "goal": "结合周期与相对进度。"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "top_p",
+  "title": "Top-p：从 logits 到可采样分布",
+  "version": "5.1.0",
+  "package": "transformers",
+  "module": "transformers.generation.logits_process",
+  "symbol": "TopPLogitsWarper.__call__",
+  "kind": "method",
+  "origin": "Installed transformers wheel; exact source excerpt; no remote fetch",
+  "source_file": "src/transformers/generation/logits_process.py",
+  "first_line": 519,
+  "last_line": 532,
+  "upstream_url": "https://github.com/huggingface/transformers/blob/v5.1.0/src/transformers/generation/logits_process.py#L519-L532",
+  "sha256": "ac1f86dbf01f392e3fd068c434fa30b785d55ad2f8943209185319f081445698",
+  "module_sha256": "f87a1496431d779b7212c29ae5d116051cb76fff6d26727c98a6e6bdba393d87",
+  "license": "Apache-2.0",
+  "adaptations": "Reference unchanged. Imports, method carrier class, small CPU inputs and validation are supplied separately; documentation-only auto_docstring is not executed in the carrier."
+}

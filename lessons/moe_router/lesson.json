@@ -1,0 +1,118 @@
+{
+  "subtitle": "MoE router：选择与归一化 Top-K",
+  "context": "把 Dense MLP 扩展到稀疏专家：每个 token 不运行所有专家，而是先选择 Top-K，并为所选专家分配权重。",
+  "outcomes": [
+    "保存专家数与每 token 的 Top-K",
+    "建立路由参数",
+    "展平 batch/token 轴",
+    "为每个 token 计算专家得分"
+  ],
+  "runtime_context": "上游 transformers.models.qwen3_moe.modeling_qwen3_moe 的导入、方法所属类和小输入由运行器提供；reference 未改写。实例不下载模型权重。当前课程顺序为 012，前置课完成后再进入。",
+  "line_notes": [
+    {
+      "start": 1,
+      "end": 3,
+      "title": "接口与本课位置",
+      "why": "把 Dense MLP 扩展到稀疏专家：每个 token 不运行所有专家，而是先选择 Top-K，并为所选专家分配权重。"
+    },
+    {
+      "start": 4,
+      "end": 7,
+      "title": "保存专家数与每 token 的 Top-K",
+      "why": "专家总数 E 与每 token 选择数 K 是两个不同概念。"
+    },
+    {
+      "start": 8,
+      "end": 10,
+      "title": "建立路由参数",
+      "why": "该版本源码先初始化为 zeros；模型框架会执行其初始化策略，本课用可复现的小权重观察非平凡的专家选择。"
+    },
+    {
+      "start": 11,
+      "end": 11,
+      "title": "展平 batch/token 轴",
+      "why": "router 按 token 独立计算，对应 [N,D]，N=B×T。"
+    },
+    {
+      "start": 12,
+      "end": 13,
+      "title": "为每个 token 计算专家得分",
+      "why": "输出 [N,E]，专家轴上的 softmax 产生可比较概率。"
+    },
+    {
+      "start": 14,
+      "end": 14,
+      "title": "选择少量专家",
+      "why": "返回 [N,K] 的权重与专家编号；编号不是连续 token 下标。"
+    },
+    {
+      "start": 15,
+      "end": 19,
+      "title": "可选地重新归一化所选权重",
+      "why": "只在 Top-K 集合内归一化；未选专家被丢弃，不是重新对全部专家 softmax。"
+    }
+  ],
+  "symbols": {
+    "F": "torch.nn.functional：不额外保存参数的神经网络运算。",
+    "Module": "PyTorch 模块基类，负责子模块、参数、train/eval 状态与梯度相关行为。",
+    "Parameter": "需要被 nn.Module 注册和训练的 Tensor。",
+    "Qwen3MoeTopKRouter": "Qwen3-MoE 的 token 到专家路由器。",
+    "__init__": "构造模型配置和可训练的投影层。它不是每个 token 都重新运行的计算。",
+    "config": "本课模块的配置对象；配置字段的实际值见对应属性的运行观察。",
+    "dim": "本次 Tensor 操作选择的轴；-1 表示最后一轴，具体参见本行输入/输出 shape。",
+    "dtype": "Tensor 元素类型；与 shape 是两个独立属性。",
+    "float": "转为 Python 浮点数，或指定浮点类型；Tensor.float 则转换张量 dtype。",
+    "forward": "实际执行一次 attention 计算，处理当前输入并可更新 KV cache。",
+    "functional": "torch.nn.functional 命名空间。",
+    "hidden_dim": "输入 token 表示的宽度 D。",
+    "hidden_size": "decoder 隐藏表示的宽度 D，也就是进入和离开 attention 子层的最后一维。",
+    "hidden_states": "此处会把 [B,T,D] 展平成 [N,D]，每行是一个 token。",
+    "keepdim": "归约时是否保留被归约的单例轴。",
+    "linear": "不新建层，使用给定 weight 执行线性变换。",
+    "nn": "torch.nn 命名空间，提供 Module、Linear 等神经网络组件。",
+    "norm_topk_prob": "是否让被选中的 Top-K 权重之和重新为 1。",
+    "num_experts": "专家总数 E。",
+    "num_experts_per_tok": "配置中的每 token 激活专家数。",
+    "reshape": "在保持元素数量的前提下重排形状，必要时可能分配新存储；这里把多个 head 合并。",
+    "router_indices": "每个 token 所选专家的整数编号。",
+    "router_logits": "先存线性得分，随后在本实现中被同名变量覆盖为 softmax 概率。",
+    "router_scores": "本方法最后给归一化/转换 dtype 后的 Top-K 权重起的返回别名。",
+    "router_top_value": "每个 token 所选 K 个专家的权重。",
+    "self": "当前这一层 LlamaAttention 对象；其中保存配置、投影参数和训练状态。",
+    "softmax": "在指定轴上把 logits 变成归一化概率。",
+    "sum": "沿指定轴求和；是否保留轴取决于 keepdim。",
+    "super": "调用父类 nn.Module 的初始化逻辑，让后续子模块和参数正确注册。",
+    "to": "显式转换 dtype 或 device。",
+    "top_k": "每个 token 选择的专家个数。",
+    "topk": "选择给定轴上的前 K 个值及下标。",
+    "torch": "PyTorch 张量计算库。本课真实运行 CPU 张量，而不是静态编造 shape 示例。",
+    "weight": "当前层的可训练权重；具体 shape 由所处层和配置决定。",
+    "zeros": "创建全零 Tensor。"
+  },
+  "gaps": [
+    {
+      "id": 1,
+      "start": 12,
+      "end": 12,
+      "replacement": "        __BLANK_1__  # 专家打分",
+      "title": "专家打分",
+      "goal": "按 token 投影到专家轴。"
+    },
+    {
+      "id": 2,
+      "start": 14,
+      "end": 14,
+      "replacement": "        __BLANK_2__  # 选择 Top-K",
+      "title": "选择 Top-K",
+      "goal": "返回权重与正确轴上的专家编号。"
+    },
+    {
+      "id": 3,
+      "start": 16,
+      "end": 16,
+      "replacement": "            __BLANK_3__  # 重归一化",
+      "title": "重归一化",
+      "goal": "只对所选专家权重归一化。"
+    }
+  ]
+}
