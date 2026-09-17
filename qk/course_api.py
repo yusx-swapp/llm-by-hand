@@ -18,6 +18,9 @@ class CourseStore:
             with db:
                 db.execute('CREATE TABLE IF NOT EXISTS course_stages (lesson TEXT,stage TEXT,source TEXT,passed INTEGER DEFAULT 0,passed_source TEXT,report TEXT,updated_at REAL,PRIMARY KEY(lesson,stage))')
                 db.execute('CREATE TABLE IF NOT EXISTS course_meta (key TEXT PRIMARY KEY,value TEXT)')
+                db.execute('CREATE TABLE IF NOT EXISTS course_draft_revisions (id INTEGER PRIMARY KEY AUTOINCREMENT,lesson TEXT NOT NULL,stage TEXT NOT NULL,source TEXT NOT NULL,source_hash TEXT NOT NULL,origin TEXT NOT NULL,created_at REAL NOT NULL)')
+                db.execute('CREATE UNIQUE INDEX IF NOT EXISTS ux_course_revision_source ON course_draft_revisions(lesson,stage,source_hash)')
+                db.execute('CREATE INDEX IF NOT EXISTS ix_course_revision_time ON course_draft_revisions(lesson,stage,created_at DESC)')
                 if not db.execute("SELECT 1 FROM course_meta WHERE key='prototype_migrated'").fetchone():
                     if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='lesson_stages'").fetchone():
                         for row in db.execute('SELECT * FROM lesson_stages').fetchall():
@@ -47,7 +50,32 @@ class CourseStore:
         if index and not status['stages'][c.STAGES[index-1]]:raise HTTPException(403,'先验证通过上一学习阶段。')
         return status
     def save(self,lesson,stage,source):
-        with self.db() as db:db.execute('INSERT INTO course_stages(lesson,stage,source,updated_at) VALUES (?,?,?,?) ON CONFLICT(lesson,stage) DO UPDATE SET source=excluded.source,updated_at=excluded.updated_at',(lesson,stage,source,time.time()))
+        saved_at=time.time()
+        with self.db() as db:db.execute('INSERT INTO course_stages(lesson,stage,source,updated_at) VALUES (?,?,?,?) ON CONFLICT(lesson,stage) DO UPDATE SET source=excluded.source,updated_at=excluded.updated_at',(lesson,stage,source,saved_at))
+        return saved_at
+    def checkpoint(self,lesson,stage,source,origin='manual',created_at=None):
+        saved_at=created_at or time.time();source_hash=c.digest(source)
+        with self.db() as db:
+            db.execute('INSERT INTO course_stages(lesson,stage,source,updated_at) VALUES (?,?,?,?) ON CONFLICT(lesson,stage) DO UPDATE SET source=excluded.source,updated_at=excluded.updated_at',(lesson,stage,source,saved_at))
+            db.execute('INSERT OR IGNORE INTO course_draft_revisions(lesson,stage,source,source_hash,origin,created_at) VALUES (?,?,?,?,?,?)',(lesson,stage,source,source_hash,origin,saved_at))
+            row=db.execute('SELECT id FROM course_draft_revisions WHERE lesson=? AND stage=? AND source_hash=?',(lesson,stage,source_hash)).fetchone()
+        return dict(id=row['id'],saved_at=saved_at,source_hash=source_hash)
+    def revisions(self,lesson,stage,limit=30):
+        rows=self.all();current=rows.get((lesson,stage),{}).get('source')
+        with self.db() as db:
+            history=db.execute('SELECT id,source_hash,origin,created_at,length(source) AS characters FROM course_draft_revisions WHERE lesson=? AND stage=? ORDER BY created_at DESC,id DESC LIMIT ?',(lesson,stage,limit)).fetchall()
+        current_hash=c.digest(current) if current is not None else None
+        return [{**dict(row),'current':row['source_hash']==current_hash} for row in history]
+    def restore(self,lesson,stage,revision_id):
+        with self.db() as db:
+            revision=db.execute('SELECT source FROM course_draft_revisions WHERE id=? AND lesson=? AND stage=?',(revision_id,lesson,stage)).fetchone()
+            if not revision:raise KeyError(revision_id)
+            current=db.execute('SELECT source FROM course_stages WHERE lesson=? AND stage=?',(lesson,stage)).fetchone()
+            now=time.time()
+            if current and current['source'] is not None:
+                source=current['source'];db.execute('INSERT OR IGNORE INTO course_draft_revisions(lesson,stage,source,source_hash,origin,created_at) VALUES (?,?,?,?,?,?)',(lesson,stage,source,c.digest(source),'before-restore',now))
+            source=revision['source'];db.execute('INSERT INTO course_stages(lesson,stage,source,updated_at) VALUES (?,?,?,?) ON CONFLICT(lesson,stage) DO UPDATE SET source=excluded.source,updated_at=excluded.updated_at',(lesson,stage,source,now))
+        return dict(source=source,saved_at=now)
     def record(self,lesson,stage,source,report):
         with self.db() as db:
             db.execute('INSERT INTO course_stages(lesson,stage,passed,passed_source,report,updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT(lesson,stage) DO UPDATE SET passed=MAX(course_stages.passed,excluded.passed),passed_source=CASE WHEN excluded.passed THEN excluded.passed_source ELSE course_stages.passed_source END,report=excluded.report,updated_at=excluded.updated_at',(lesson,stage,int(report['passed']),source if report['passed'] else None,json.dumps(report,ensure_ascii=False),time.time()))
@@ -63,6 +91,12 @@ class Submission(BaseModel):
 
 class Reset(BaseModel):
     stage:Literal['follow','cloze','recall']
+
+class Restore(Reset):
+    revision_id:int=Field(gt=0)
+
+class Checkpoint(Submission):
+    origin:Literal['manual','auto']='manual'
 
 def execute_worker(lesson_id,source):
     started=time.monotonic();issue=c.quick_error(lesson_id,source)
@@ -92,7 +126,7 @@ def create_course_router(database):
         data=c.content(lesson_id,'lesson.json');proof=c.content(lesson_id,'provenance.json');issue=c.runtime_issue(lesson_id)
         payload=dict(stage=stage,lesson=status,course=store.status(),provenance=proof,subtitle=data['subtitle'],context=data['context'],outcomes=data['outcomes'],runtime_context=data['runtime_context'],runtime_issue=issue,
                      progress={s:{'passed':status['stages'][s],'unlocked':i==0 or status['stages'][c.STAGES[i-1]]} for i,s in enumerate(c.STAGES)},
-                     source=row['source'] if row.get('source') is not None else c.template(lesson_id,stage),report=json.loads(row['report']) if row.get('report') else None)
+                     source=row['source'] if row.get('source') is not None else c.template(lesson_id,stage),updated_at=row.get('updated_at'),report=json.loads(row['report']) if row.get('report') else None)
         if stage=='follow':
             ref=c.reference(lesson_id)
             if lesson_id=='llama_attention':
@@ -108,7 +142,18 @@ def create_course_router(database):
         return payload
     @router.post('/lesson/{lesson_id}/draft')
     def save(lesson_id:str,req:Submission):
-        store.authorize(lesson_id,req.stage);store.save(lesson_id,req.stage,req.source);return dict(ok=True)
+        store.authorize(lesson_id,req.stage);saved_at=store.save(lesson_id,req.stage,req.source);return dict(ok=True,saved_at=saved_at,source_sha256=c.digest(req.source))
+    @router.post('/lesson/{lesson_id}/checkpoint')
+    def checkpoint(lesson_id:str,req:Checkpoint):
+        store.authorize(lesson_id,req.stage);return dict(ok=True,**store.checkpoint(lesson_id,req.stage,req.source,req.origin))
+    @router.get('/lesson/{lesson_id}/revisions')
+    def revisions(lesson_id:str,stage:Literal['follow','cloze','recall']='follow'):
+        store.authorize(lesson_id,stage);return dict(revisions=store.revisions(lesson_id,stage))
+    @router.post('/lesson/{lesson_id}/restore')
+    def restore(lesson_id:str,req:Restore):
+        store.authorize(lesson_id,req.stage)
+        try:return store.restore(lesson_id,req.stage,req.revision_id)
+        except KeyError:raise HTTPException(404,'保存记录不存在。')
     @router.post('/lesson/{lesson_id}/verify')
     def verify(lesson_id:str,req:Submission):
         store.authorize(lesson_id,req.stage)
@@ -126,8 +171,8 @@ def create_course_router(database):
         finally:lock.release()
     @router.post('/lesson/{lesson_id}/reset')
     def reset(lesson_id:str,req:Reset):
-        store.authorize(lesson_id,req.stage);source=c.template(lesson_id,req.stage);store.save(lesson_id,req.stage,source)
-        return dict(source=source,message='只恢复本阶段草稿，已验证的历史版本和其他课程记录保留。')
+        store.authorize(lesson_id,req.stage);source=c.template(lesson_id,req.stage);saved_at=store.save(lesson_id,req.stage,source)
+        return dict(source=source,saved_at=saved_at,message='只恢复本阶段草稿，已验证的历史版本和其他课程记录保留。')
     @router.post('/project')
     def project():
         sources=store.project_sources()

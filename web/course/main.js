@@ -35,8 +35,8 @@ async function mount(data,token){
   const observedCases=Object.values(data.observations?.fixtures || {});
   courseData=data.course;renderCourse(spec.id);
   $('#course-breadcrumb').innerHTML=`${e(spec.chapter)} <span>/</span> ${e(spec.family)} <span>/</span> <strong>${number(spec)}</strong>`;
-  let disposed=false,ready=false,learner,reference,hovers,saveTimer,saveQueue=Promise.resolve(true),busy=false;
-  let source=data.source,persisted=data.source,report=data.report,runError='',fixture=observedCases[0]?.id || 'basic';
+  let disposed=false,ready=false,applying=false,learner,reference,hovers,saveTimer,periodicSaveTimer,checkpointTimer,saveQueue=Promise.resolve(true),busy=false;
+  let source=data.source,persisted=data.source,lastSavedAt=data.updated_at || null,lastCheckpointSource=data.source,report=data.report,runError='',fixture=observedCases[0]?.id || 'basic';
   const alive=()=>!disposed && token===epoch;
   const pendingKey=`lesson:${data.provenance.sha256}:${stage}`;
   const pending=storage.get(pendingKey);
@@ -55,7 +55,7 @@ async function mount(data,token){
       ${follow?`<section class="code-pane reference-pane" aria-label="对照源码"><header class="pane-header"><div><span class="file-icon">${icon('book')}</span><strong>Reference</strong><span class="pane-meta">上游原样保留 · 只读</span></div><button class="text-button" id="explain-reference">${icon('bulb')} 解释光标处</button></header><div class="reference-tools"><label>运行示例 <select id="fixture-select" aria-label="选择参考运行示例">${observedCases.map(item=>`<option value="${e(item.id)}">${e(item.title)}</option>`).join('')}</select></label><div class="jump-links" aria-label="源码位置">${data.notes.filter(note=>note.start>1).slice(0,3).map(note=>`<button data-line="${note.start}" title="${e(note.title)}">L${note.start}</button>`).join('')}</div></div><div id="reference-editor" class="editor-host"><div class="loading"><span class="spinner"></span> 加载本地编辑器…</div></div><footer class="source-footer"><span id="fixture-summary"></span><button class="text-button" id="support-source">课程上下文 ${icon('external')}</button></footer></section>`:
       `<aside class="exercise-context">${stage==='cloze'?`<div class="context-heading"><span class="eyebrow">RETRIEVE · 再想一遍</span><h2>补回实现中的关键决策</h2><p>不是随机挖空。每一处对应刚才跟敲时的一条数据流或配置关系。</p></div><div class="gap-list">${data.gaps.map(gap=>`<button class="gap-item" data-gap="${gap.id}"><span class="gap-number">${gap.id}</span><span><strong>${e(gap.title)}</strong><small>${e(gap.goal)}</small><em class="gap-state">待填写</em></span>${icon('chevron')}</button>`).join('')}</div><p class="context-footnote">「已填写」只表示占位符已替换，正确性仍需运行验证。</p>`:
       `<div class="context-heading"><span class="eyebrow">REBUILD · 独立写出来</span><h2>这一次，代码由你组织。</h2><p>不提供实现步骤，不展示参考答案。从接口写出当前课程的功能。</p></div><div class="recall-contract"><h3>本课在流程中的位置</h3><p>${e(data.context)}</p><h3>需要满足的行为</h3><ul>${data.outcomes.map(text=>`<li>${e(text)}</li>`).join('')}</ul><h3>如何验证</h3><p>使用真实上游对象和小输入，对照完整输出、状态变化和相关梯度。允许等价写法，不要求逐字复现。</p></div>`}<button class="button secondary back-to-learning" id="back-to-learning">${icon('back')} 回到上一阶段复习</button></aside>`}
-      <section class="code-pane learner-pane" aria-label="自己动手实现"><header class="pane-header"><div><span class="file-icon">${icon('code')}</span><strong>你的实现</strong><span class="pane-meta">${stage==='follow'?'照着左侧，亲手敲一遍':stage==='cloze'?'补全 __BLANK_ 标记':'从接口独立复现'}</span></div><button class="save-status" id="save-status" title="点击重新保存" aria-live="polite">${source?'草稿已载入':'尚未输入'}</button></header><div class="learner-tools"><span>attention.py <i>·</i> Python</span><div><button id="runtime-context" class="text-button">已提供哪些运行依赖？</button>${follow?`<button id="explain-learner" class="text-button">${icon('bulb')} 解释光标处</button>`:''}</div></div><div class="learner-editor-wrap"><div id="learner-editor" class="editor-host"></div>${follow?`<div class="empty-editor-prompt" id="empty-editor-prompt"><span class="typing-cursor"></span><strong>从第一行开始，敲出自己的理解。</strong><p>对照左侧的装饰器和 class 开始。卡住时，把鼠标放到对应的变量或语句上。</p><span>这里不会自动填入 reference。</span></div>`:''}</div><footer class="editor-status"><span id="cursor-status">Ln 1, Col 1</span><span>${follow?'悬停 / 点按解释 · ':''}UTF-8 · 4 spaces</span></footer><div class="practice-actions"><button class="text-button" id="reset-draft">${icon('refresh')} 重置本阶段草稿</button><button class="button primary" id="verify-code">${icon('play')} 验证我的实现 <kbd>Ctrl ↵</kbd></button></div></section>
+      <section class="code-pane learner-pane" aria-label="自己动手实现"><header class="pane-header"><div><span class="file-icon">${icon('code')}</span><strong>你的实现</strong><span class="pane-meta">${stage==='follow'?'照着左侧，亲手敲一遍':stage==='cloze'?'补全 __BLANK_ 标记':'从接口独立复现'}</span></div><button class="save-status" id="save-status" title="点击立即保存" aria-live="polite">${source?(lastSavedAt?`已保存 · ${new Date(lastSavedAt*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`:'草稿已载入'):'尚未输入'}</button></header><div class="learner-tools"><span>attention.py <i>·</i> Python</span><div><button id="runtime-context" class="text-button">已提供哪些运行依赖？</button>${follow?`<button id="explain-learner" class="text-button">${icon('bulb')} 解释光标处</button>`:''}</div></div><div class="learner-editor-wrap"><div id="learner-editor" class="editor-host"></div>${follow?`<div class="empty-editor-prompt" id="empty-editor-prompt"><span class="typing-cursor"></span><strong>从第一行开始，敲出自己的理解。</strong><p>对照左侧的装饰器和 class 开始。卡住时，把鼠标放到对应的变量或语句上。</p><span>这里不会自动填入 reference。</span></div>`:''}</div><footer class="editor-status"><span id="cursor-status">Ln 1, Col 1</span><span>${follow?'悬停 / 点按解释 · ':''}UTF-8 · 4 spaces</span></footer><div class="practice-actions"><button class="text-button" id="reset-draft">${icon('refresh')} 重置本阶段草稿</button><div class="save-actions"><button class="text-button" id="save-history">${icon('clock')} 保存记录</button><button class="button secondary" id="save-progress">${icon('check')} 保存进度 <kbd>Ctrl S</kbd></button><button class="button primary" id="verify-code">${icon('play')} 验证我的实现 <kbd>Ctrl ↵</kbd></button></div></div></section>
     </div>
     <section class="verification" aria-label="实现验证"><div class="verification-heading"><div><span class="section-symbol">${icon('layers')}</span><h2>让实现真正接回模型</h2><span>不是比对答案文本</span></div><button class="text-button" id="toggle-results" aria-expanded="true">收起结果 ${icon('chevron')}</button></div><div id="verification-body" aria-live="polite"></div></section>
     <div id="stage-completion"></div>
@@ -64,26 +64,41 @@ async function mount(data,token){
   $('.learner-tools>span').innerHTML=`${e(spec.id)}.py <i>·</i> Python`;
   if($('#empty-editor-prompt p'))$('#empty-editor-prompt p').textContent='对照左侧的接口和代码，从第一行开始敲。卡住时，把鼠标放到对应变量或语句上。';
 
+  const savedClock=timestamp=>new Date(timestamp*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
   function saveLabel(text,error=false){if(alive()){ $('#save-status').textContent=text;$('#save-status').classList.toggle('error',error); }}
+  function savedLabel(prefix='已自动保存'){saveLabel(lastSavedAt?`${prefix} · ${savedClock(lastSavedAt)}`:prefix);}
   function persist(notify=false){
     clearTimeout(saveTimer);
     const snapshot=source;
     saveQueue=saveQueue.catch(()=>false).then(async()=>{
-      if(snapshot===persisted){if(snapshot===source)storage.remove(pendingKey);return true;}
+      if(snapshot===persisted){if(snapshot===source)storage.remove(pendingKey);if(notify)savedLabel('进度已保存');return true;}
       saveLabel('正在保存…');
       try{
-        await api(endpoint+'/draft',{stage,source:snapshot});persisted=snapshot;
+        const result=await api(endpoint+'/draft',{stage,source:snapshot});persisted=snapshot;lastSavedAt=result.saved_at;
         if(source===snapshot)storage.remove(pendingKey);
-        saveLabel(source===persisted?'已保存到本地':'尚有新编辑');
+        if(source===persisted)savedLabel();else saveLabel('尚有新编辑');
         if(notify && alive())toast('本阶段草稿已保存。');return true;
       }catch(error){saveLabel('保存失败 · 点此重试',true);if(notify && alive())toast(error.message,true);return false;}
     });return saveQueue;
   }
 
+  async function checkpoint(notify=true,origin='manual'){
+    const snapshot=source;
+    if(!await persist(false))return false;
+    try{
+      const result=await api(endpoint+'/checkpoint',{stage,source:snapshot,origin});
+      persisted=snapshot;lastSavedAt=result.saved_at;lastCheckpointSource=snapshot;
+      if(source===snapshot){storage.remove(pendingKey);savedLabel(origin==='manual'?'已手动保存':'已建立自动快照');}
+      if(notify)toast('已保存进度，并建立可恢复记录。');return true;
+    }catch(error){saveLabel('保存失败 · 点此重试',true);if(notify)toast(error.message,true);return false;}
+  }
+
   function changed(value){
     if(!alive())return;
-    source=value;storage.set(pendingKey,value);saveLabel('正在编辑…');
-    clearTimeout(saveTimer);saveTimer=setTimeout(()=>persist(),550);
+    source=value;
+    if(applying)return;
+    storage.set(pendingKey,value);saveLabel('未保存的编辑…');
+    clearTimeout(saveTimer);saveTimer=setTimeout(()=>persist(),400);
     if(follow)$('#empty-editor-prompt').hidden=!!value.length;
     if(stage==='cloze')updateGaps();
     if(report)markStale();
@@ -102,6 +117,29 @@ async function mount(data,token){
       const filled=!!source.trim() && !remaining.has(Number(button.dataset.gap));button.classList.toggle('filled',filled);
       $('.gap-state',button).textContent=filled?'已填写 · 待验证':'待填写';
     });
+  }
+
+  async function showHistory(){
+    if(!ready)return;
+    let history;
+    try{history=(await api(`${endpoint}/revisions?stage=${stage}`)).revisions;}
+    catch(error){toast(error.message,true);return;}
+    if(!history.length){
+      await dialog({title:'还没有保存记录',symbol:'clock',confirm:'返回编辑',cancel:'',body:'<p>自动保存已经开启。点击「保存进度」会额外建立一个可恢复记录；持续编辑时也会定期建立快照。</p>'});return;
+    }
+    const labels={manual:'手动保存',auto:'自动快照','imported-legacy':'旧工程草稿','before-restore':'恢复前备份'};
+    let selected=null;
+    const opened=dialog({title:'保存记录',symbol:'clock',confirm:'关闭',cancel:'',body:`<p>当前草稿会自动保存。恢复旧记录前，当前版本也会先备份。</p><div class="save-history-list">${history.map(item=>`<button type="button" class="save-history-item ${item.current?'current':''}" data-revision="${item.id}" ${item.current?'disabled':''}><span><strong>${e(labels[item.origin] || item.origin)}</strong><small>${e(new Date(item.created_at*1000).toLocaleString())} · ${item.characters} 字符</small></span><em>${item.current?'当前版本':'恢复'}</em></button>`).join('')}</div>`});
+    document.querySelectorAll('[data-revision]').forEach(button=>button.onclick=()=>{selected=Number(button.dataset.revision);$('#app-dialog').close('cancel');});
+    await opened;
+    if(!selected)return;
+    if(!await dialog({title:'恢复这条保存记录？',symbol:'refresh',confirm:'恢复',cancel:'保留当前版本',body:'<p>当前代码会先自动备份，然后编辑器将切换到选择的历史版本。其他课程和阶段不受影响。</p>'}))return;
+    try{
+      const result=await api(endpoint+'/restore',{stage,revision_id:selected});
+      applying=true;source=result.source;persisted=result.source;lastSavedAt=result.saved_at;lastCheckpointSource=result.source;
+      learner.model.setValue(result.source);applying=false;storage.remove(pendingKey);savedLabel('已恢复并保存');report=null;runError='';learner.error(null,'');
+      if(follow)$('#empty-editor-prompt').hidden=!!source.length;if(stage==='cloze')updateGaps();renderReport();toast('已恢复保存记录。');
+    }catch(error){applying=false;toast(error.message,true);}
   }
 
   function renderProgress(){
@@ -144,6 +182,7 @@ async function mount(data,token){
   }
   function setBusy(){
     $('#verify-code').disabled=!ready || busy || !!data.runtime_issue;$('#reset-draft').disabled=!ready || busy;
+    $('#save-progress').disabled=!ready;$('#save-history').disabled=!ready;
     $('#verify-code').innerHTML=busy?'<span class="spinner"></span> 正在验证…':`${icon('play')} 验证我的实现 <kbd>Ctrl ↵</kbd>`;
     renderReport();
   }
@@ -165,12 +204,14 @@ async function mount(data,token){
   $('#runtime-context').onclick=dependencyInfo;
   $('#source-info').onclick=()=>dialog({title:'这份 reference 从哪里来？',symbol:'code',confirm:'返回课堂',cancel:'',body:`<p>直接取自本机安装的 <strong>${e(data.provenance.package || 'transformers')} ${e(data.provenance.version)}</strong>，不是改写后的伪代码。</p><code>${e(data.provenance.source_file)}</code><p>上游第 ${data.provenance.first_line}–${data.provenance.last_line} 行 · Apache-2.0。</p><p>导入、方法所属类和小型输入在运行器中单独提供。</p><p><a class="external-link" href="${e(data.provenance.upstream_url)}" target="_blank" rel="noopener noreferrer">打开上游源码 ${icon('external')}</a></p><details><summary>源码指纹</summary><code>${e(data.provenance.sha256)}</code></details>`});
   $('#verify-code').onclick=verify;
-  $('#save-status').onclick=()=>persist(true);
+  $('#save-status').onclick=()=>checkpoint(true,'manual');
+  $('#save-progress').onclick=()=>checkpoint(true,'manual');
+  $('#save-history').onclick=showHistory;
   $('#toggle-results').onclick=()=>{const body=$('#verification-body');body.hidden=!body.hidden;$('#toggle-results').setAttribute('aria-expanded',String(!body.hidden));$('#toggle-results').innerHTML=`${body.hidden?'展开结果':'收起结果'} ${icon('chevron')}`;};
   $('#reset-draft').onclick=async()=>{
     if(!ready || busy || !await dialog({title:'重置这个阶段的草稿？',symbol:'refresh',confirm:'重置草稿',cancel:'保留我的代码',danger:true,body:'<p>本阶段恢复为空白或初始骨架。其他阶段的草稿和已有通过记录都保留。</p>'}))return;
-    await persist();
-    try{const value=await api(endpoint+'/reset',{stage});if(!alive())return;source=value.source;persisted=source;learner.model.setValue(source);clearTimeout(saveTimer);storage.remove(pendingKey);report=null;runError='';learner.error(null,'');saveLabel('本阶段草稿已重置');renderReport();}
+    await checkpoint(false,'manual');
+    try{const value=await api(endpoint+'/reset',{stage});if(!alive())return;applying=true;source=value.source;persisted=source;lastSavedAt=value.saved_at;lastCheckpointSource=source;learner.model.setValue(source);applying=false;clearTimeout(saveTimer);storage.remove(pendingKey);report=null;runError='';learner.error(null,'');savedLabel('本阶段草稿已重置');renderReport();}
     catch(error){if(alive())toast(error.message,true);}
   };
   if($('#back-to-learning'))$('#back-to-learning').onclick=()=>go(stage==='cloze'?'follow':'cloze');
@@ -200,9 +241,19 @@ async function mount(data,token){
   }
   ready=true;renderProgress();setBusy();$('.lesson').dataset.ready='true';
   if(source!==persisted){storage.set(pendingKey,source);persist();}
-  const onVisibility=()=>{if(document.hidden)persist();};document.addEventListener('visibilitychange',onVisibility);
-  return {verify,save:()=>persist(true),dirty:()=>source!==persisted,
-    async dispose(){if(disposed)return;disposed=true;learner?.view.updateOptions({readOnly:true});clearTimeout(saveTimer);document.removeEventListener('visibilitychange',onVisibility);await persist();hovers?.dispose();reference?.dispose();learner?.dispose();},
+  function emergencySave(){
+    storage.set(pendingKey,source);
+    if(source===persisted || !navigator.sendBeacon)return;
+    const body=new Blob([JSON.stringify({stage,source})],{type:'application/json'});
+    navigator.sendBeacon(`/api${endpoint}/draft`,body);
+  }
+  const onVisibility=()=>{if(document.hidden){emergencySave();persist();}};
+  const onPageHide=()=>emergencySave();
+  document.addEventListener('visibilitychange',onVisibility);window.addEventListener('pagehide',onPageHide);
+  periodicSaveTimer=setInterval(()=>{if(source!==persisted)persist();},3000);
+  checkpointTimer=setInterval(()=>{if(source && source===persisted && source!==lastCheckpointSource)checkpoint(false,'auto');},60000);
+  return {verify,save:()=>checkpoint(true,'manual'),dirty:()=>source!==persisted,
+    async dispose(){if(disposed)return;disposed=true;learner?.view.updateOptions({readOnly:true});clearTimeout(saveTimer);clearInterval(periodicSaveTimer);clearInterval(checkpointTimer);document.removeEventListener('visibilitychange',onVisibility);window.removeEventListener('pagehide',onPageHide);await persist();hovers?.dispose();reference?.dispose();learner?.dispose();},
   };
 }
 

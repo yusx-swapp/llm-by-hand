@@ -21,7 +21,7 @@ mimetypes.add_type("text/javascript", ".mjs")
 
 def create_app(db_path: Path | None = None, *, lesson_db_path: Path | None = None) -> FastAPI:
     database = Path(lesson_db_path or db_path or os.environ.get("QK_DB", ROOT / "data" / "progress.sqlite3"))
-    application = FastAPI(title="LLM by Hand", version="1.0.0", docs_url=None, redoc_url=None)
+    application = FastAPI(title="LLM by Hand", version="1.0.1", docs_url=None, redoc_url=None)
     application.add_middleware(
         TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "[::1]", "testserver"]
     )

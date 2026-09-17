@@ -99,6 +99,37 @@ def test_late_validation_keeps_latest_draft_and_verified_snapshot(client,tmp_pat
     row=store.all()['mha_core','follow']
     assert row['source']=='new draft' and row['passed_source']=='submitted snapshot'
 
+def test_autosaved_draft_survives_a_full_application_restart(tmp_path):
+    database=tmp_path/'persistent.sqlite3';source='def half_finished():\n    value = 1\n'
+    with TestClient(create_app(database)) as first:
+        result=first.post('/api/course/lesson/mha_core/draft',json=dict(stage='follow',source=source))
+        assert result.status_code==200 and result.json()['saved_at']>0
+    with TestClient(create_app(database)) as restarted:
+        data=restarted.get('/api/course/lesson/mha_core').json()
+        assert data['source']==source and data['updated_at']>0
+
+def test_manual_and_auto_checkpoints_can_be_listed_and_restored(client):
+    first='def first_version():\n    return 1\n';second='def second_version():\n    return 2\n'
+    a=client.post('/api/course/lesson/mha_core/checkpoint',json=dict(stage='follow',source=first,origin='manual')).json()
+    client.post('/api/course/lesson/mha_core/checkpoint',json=dict(stage='follow',source=second,origin='auto'))
+    client.post('/api/course/lesson/mha_core/checkpoint',json=dict(stage='follow',source=second,origin='auto'))
+    history=client.get('/api/course/lesson/mha_core/revisions?stage=follow').json()['revisions']
+    assert len(history)==2 and {item['origin'] for item in history}=={'manual','auto'}
+    assert sum(item['current'] for item in history)==1
+    restored=client.post('/api/course/lesson/mha_core/restore',json=dict(stage='follow',revision_id=a['id'])).json()
+    assert restored['source']==first
+    assert client.get('/api/course/lesson/mha_core').json()['source']==first
+    assert client.post('/api/course/lesson/mha_core/restore',json=dict(stage='follow',revision_id=999999)).status_code==404
+
+def test_imported_local_draft_is_a_recoverable_revision_not_an_overwrite(tmp_path):
+    store=api.CourseStore(tmp_path/'learning.sqlite3')
+    store.save('mha_core','follow','current')
+    imported=store.checkpoint('mha_core','follow','old local draft','imported-legacy',created_at=123.0)
+    store.save('mha_core','follow','current')
+    history=store.revisions('mha_core','follow')
+    assert any(item['id']==imported['id'] and item['origin']=='imported-legacy' and not item['current'] for item in history)
+    assert store.all()['mha_core','follow']['source']=='current'
+
 def test_real_complete_reference_course_and_training_project(tmp_path):
     output=tmp_path/'reference-check.json'
     subprocess.run([sys.executable,'-X','utf8',str(c.ROOT/'qk/course_worker.py'),'check-all','--output',str(output)],check=True,timeout=180)

@@ -68,6 +68,14 @@ There is no frontend build, npm server, external CDN or required AI-provider key
 
 Keyboard shortcuts: `Ctrl/⌘ + Enter` to verify, `Ctrl/⌘ + S` to save. The editor also provides a button to explain the current cursor position.
 
+### Saving and recovery
+
+- Edits are written to the local SQLite database after a short debounce and survive application restarts.
+- The editor header shows the latest saved time. **Save progress** (`Ctrl/⌘ + S`) creates a named recovery point; continued work also receives periodic snapshots.
+- **Save history** lists recovery points for the current lesson and stage. Restoring one first preserves the current code as another backup.
+- Closing or hiding the page attempts a final beacon write, while every keystroke also keeps a browser recovery copy in case the server was stopped before the request completed.
+- Drafts, checkpoints and pass records remain separate per lesson and per stage.
+
 ## Connect the code to training
 
 Once the required independent implementations pass, the course can run a tiny CPU experiment using those verified snapshots:
@@ -102,7 +110,7 @@ No ORM, plugin framework or frontend state-management library is required.
 - `QK_DB` selects another database; its experiment artifacts live beside it in a `*-runs/` directory.
 - `QK_PORT` selects the local port (default `8017`). The server remains loopback-only.
 - Drafts, databases, checkpoints, local environments and experiment outputs are ignored by Git. No personal practice history is shipped.
-- Failed saves retain a browser recovery copy. Verification does not overwrite newer edits.
+- Failed saves retain a browser recovery copy. Verification does not overwrite newer edits. Draft history is stored locally and is never part of the Git repository.
 
 This repository contains a runnable application, not a GitHub Pages deployment: Pages cannot execute its Python/PyTorch validation backend.
 
